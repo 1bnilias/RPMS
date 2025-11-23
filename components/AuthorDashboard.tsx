@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { BookOpen } from 'lucide-react'
-import { User, Paper, createPaper, getPapers } from '@/lib/supabase'
+import { User, Paper, createPaper, getPapers } from '@/lib/api'
+import Header from './Header'
 
 interface AuthorDashboardProps {
   user: User
@@ -11,7 +12,7 @@ interface AuthorDashboardProps {
 
 export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps) {
   const [papers, setPapers] = useState<Paper[]>([])
-  const [notifications, setNotifications] = useState<Array<{id: number, message: string, timestamp: string}>>([])
+  const [notifications, setNotifications] = useState<Array<{ id: number, message: string, timestamp: string }>>([])
   const [showSubmissionForm, setShowSubmissionForm] = useState(false)
   const [newPaper, setNewPaper] = useState({ title: '', abstract: '', content: '' })
   const [loading, setLoading] = useState(true)
@@ -25,7 +26,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
       const result = await getPapers()
       if (result.success && result.data) {
         // Filter papers for current author
-        const authorPapers = result.data.filter((paper: any) => 
+        const authorPapers = result.data.filter((paper: any) =>
           paper.author_id === user.id
         )
         setPapers(authorPapers)
@@ -94,23 +95,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-red-600 text-white p-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <BookOpen className="w-8 h-8" />
-            <div>
-              <h1 className="text-xl font-bold">RPMS - Author Dashboard</h1>
-              <p className="text-red-100">Welcome, {user.name}</p>
-            </div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="px-4 py-2 border border-white text-red-600 bg-white rounded-md hover:bg-red-50 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+      <Header user={user} title="Author Dashboard" onLogout={onLogout} />
 
       <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -174,7 +159,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                       id="title"
                       type="text"
                       value={newPaper.title}
-                      onChange={(e) => setNewPaper({...newPaper, title: e.target.value})}
+                      onChange={(e) => setNewPaper({ ...newPaper, title: e.target.value })}
                       placeholder="Enter paper title"
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       required
@@ -187,7 +172,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                     <textarea
                       id="abstract"
                       value={newPaper.abstract}
-                      onChange={(e) => setNewPaper({...newPaper, abstract: e.target.value})}
+                      onChange={(e) => setNewPaper({ ...newPaper, abstract: e.target.value })}
                       placeholder="Enter paper abstract"
                       rows={4}
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
@@ -201,7 +186,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                     <textarea
                       id="content"
                       value={newPaper.content}
-                      onChange={(e) => setNewPaper({...newPaper, content: e.target.value})}
+                      onChange={(e) => setNewPaper({ ...newPaper, content: e.target.value })}
                       placeholder="Enter paper content"
                       rows={8}
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
