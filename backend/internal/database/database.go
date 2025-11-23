@@ -91,7 +91,7 @@ func RunMigrations(db *Database) error {
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		title VARCHAR(500) NOT NULL,
 		description TEXT,
-		date DATE NOT NULL,
+		date TIMESTAMP WITH TIME ZONE NOT NULL,
 		location VARCHAR(255),
 		coordinator_id UUID REFERENCES users(id) ON DELETE CASCADE,
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -108,12 +108,34 @@ func RunMigrations(db *Database) error {
 	CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
 	CREATE INDEX IF NOT EXISTS idx_events_coordinator_id ON events(coordinator_id);`
 
+	// Add new columns to users table if they don't exist
+	addAvatarColumn := `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(255) DEFAULT '';`
+	addBioColumn := `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '';`
+	addPreferencesColumn := `ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}';`
+
+	// Alter events table date column to TIMESTAMP if it exists as DATE
+	alterEventsDateColumn := `
+		DO $$
+		BEGIN
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_name = 'events' AND column_name = 'date' AND data_type = 'date'
+			) THEN
+				ALTER TABLE events ALTER COLUMN date TYPE TIMESTAMP WITH TIME ZONE USING date::TIMESTAMP WITH TIME ZONE;
+			END IF;
+		END $$;
+	`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
 		createReviewsTable,
 		createEventsTable,
 		createIndexes,
+		addAvatarColumn,
+		addBioColumn,
+		addPreferencesColumn,
+		alterEventsDateColumn,
 	}
 
 	for _, migration := range migrations {
