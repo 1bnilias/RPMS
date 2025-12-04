@@ -52,6 +52,37 @@ export interface Event {
     coordinator_email?: string
 }
 
+export interface Message {
+    id: string
+    sender_id: string
+    receiver_id: string
+    content: string
+    attachment_url?: string
+    attachment_name?: string
+    attachment_type?: string
+    attachment_size?: number
+    reply_to_message_id?: string
+    is_forwarded: boolean
+    is_read: boolean
+    created_at: string
+    sender_name?: string
+    receiver_name?: string
+}
+
+export interface Contact {
+    id: string
+    name: string
+    email: string
+    role: string
+    avatar: string
+    unread_count: number
+    last_message?: {
+        content: string
+        attachment_url?: string
+        created_at: string
+    }
+}
+
 // Helper to get auth header
 const getAuthHeader = () => {
     const token = localStorage.getItem('authToken')
@@ -217,4 +248,65 @@ export async function deleteEvent(id: string) {
     return request(`/events/${id}`, {
         method: 'DELETE',
     })
+}
+
+
+// Chat
+export async function getContacts() {
+    return request<Contact[]>('/chat/contacts')
+}
+
+export async function getMessages(contactId: string) {
+    return request<Message[]>(`/chat/messages?contact_id=${contactId}`)
+}
+
+export async function sendMessage(
+    receiverId: string,
+    content: string,
+    attachmentUrl?: string,
+    attachmentName?: string,
+    attachmentType?: string,
+    attachmentSize?: number,
+    replyToMessageId?: string,
+    isForwarded?: boolean
+) {
+    return request<Message>('/chat/send', {
+        method: 'POST',
+        body: JSON.stringify({
+            receiver_id: receiverId,
+            content,
+            attachment_url: attachmentUrl,
+            attachment_name: attachmentName,
+            attachment_type: attachmentType,
+            attachment_size: attachmentSize,
+            reply_to_message_id: replyToMessageId,
+            is_forwarded: isForwarded
+        }),
+    })
+}
+
+export async function uploadChatFile(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const token = localStorage.getItem('authToken')
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+
+    const response = await fetch(`${API_BASE_URL}/chat/upload`, {
+        method: 'POST',
+        headers,
+        body: formData
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        return { success: false, error: data.error || 'Upload failed' }
+    }
+
+    return { success: true, data }
+}
+
+export async function getUnreadCount() {
+    return request<{ count: number }>('/chat/unread-count')
 }
