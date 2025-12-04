@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 
-# Next.js
+# Next.js 
 .next
 
 # Editor directories and files
