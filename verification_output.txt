@@ -1,0 +1,9 @@
+﻿--- START VERIFICATION ---
+Attempting first registration (coordinator)...
+First registration failed: The remote server returned an error: (409) Conflict.
+Response Body: 
+Attempting second registration (coordinator) - SHOULD FAIL...
+Second registration failed (EXPECTED): The remote server returned an error: (409) Conflict.
+VERIFIED: Got 409 Conflict
+Response Body: 
+--- END VERIFICATION ---

@@ -42,6 +42,21 @@ func (s *Server) Register(c *gin.Context) {
 		return
 	}
 
+	// Check if a user with this role already exists
+	ctx := c.Request.Context()
+	var roleCount int
+	roleCheckQuery := `SELECT COUNT(*) FROM users WHERE role = $1`
+	err = s.db.Pool.QueryRow(ctx, roleCheckQuery, req.Role).Scan(&roleCount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check role availability"})
+		return
+	}
+
+	if roleCount > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "A user with this role already exists. Each role can only be assigned to one user."})
+		return
+	}
+
 	// Create user
 	user := models.User{
 		Email:        req.Email,
@@ -53,7 +68,7 @@ func (s *Server) Register(c *gin.Context) {
 		Preferences:  map[string]interface{}{}, // Default
 	}
 
-	ctx := c.Request.Context()
+	// ctx is already declared above
 	query := `
 		INSERT INTO users (email, password_hash, name, role, avatar, bio, preferences)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
