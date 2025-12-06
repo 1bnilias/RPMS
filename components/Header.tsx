@@ -70,7 +70,7 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
                                 <UserIcon className="h-5 w-5 text-gray-500" />
                             )}
                         </div>
-                        <span className="font-medium hidden sm:block">{user.name}</span>
+                        <span className="font-medium">{user.name || 'User'}</span>
                     </button>
                     <button
                         onClick={onLogout}

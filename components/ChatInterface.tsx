@@ -22,7 +22,6 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const [searchTerm, setSearchTerm] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
     const messageInputRef = useRef<HTMLInputElement>(null)
     const prevMessagesLengthRef = useRef(0)
 
