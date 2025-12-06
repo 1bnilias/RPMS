@@ -34,7 +34,7 @@ export default function Home() {
             </p>
             <div className="pt-2">
               <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 uppercase tracking-[0.2em] font-semibold">
-                Saint Mary's University
+                Saint Mary&apos;s University
               </p>
             </div>
           </div>
