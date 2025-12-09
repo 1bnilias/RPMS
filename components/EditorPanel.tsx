@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, createReview } from '@/lib/api'
+import { FileText, Download, Upload, Edit, Clock, X, MessageSquare, Send } from 'lucide-react'
+import { User, Paper, Review, getPapers, getReviews, createReview, updatePaper, uploadFile, recommendPaperForPublication, sendMessage } from '@/lib/api'
 import Header from './Header'
 
 interface EditorPanelProps {
@@ -14,7 +14,11 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const [papers, setPapers] = useState<Paper[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
+  const [editingPaper, setEditingPaper] = useState<Paper | null>(null)
+  const [editForm, setEditForm] = useState({ title: '', abstract: '', file: null as File | null })
   const [reviewData, setReviewData] = useState({ rating: 5, comments: '', recommendation: 'accept' as const })
+  const [feedbackForm, setFeedbackForm] = useState({ paperId: '', message: '' })
+  const [adminContactForm, setAdminContactForm] = useState({ paperId: '', message: '' })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,6 +41,8 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       if (reviewsResult.success && reviewsResult.data) {
         setReviews(reviewsResult.data)
       }
+
+
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -66,6 +72,111 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       } catch (error) {
         console.error('Failed to submit review:', error)
       }
+    }
+  }
+
+  const handleEditClick = (paper: Paper) => {
+    setEditingPaper(paper)
+    setEditForm({ title: paper.title, abstract: paper.abstract || '', file: null })
+  }
+
+  const handleUpdatePaper = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPaper) return
+
+    try {
+      let fileUrl = editingPaper.file_url
+      if (editForm.file) {
+        const uploadResult = await uploadFile(editForm.file)
+        if (uploadResult.success && uploadResult.data) {
+          fileUrl = uploadResult.data.url
+        }
+      }
+
+      const updates = {
+        title: editForm.title,
+        abstract: editForm.abstract,
+        file_url: fileUrl,
+        status: editingPaper.status
+      }
+
+      const result = await updatePaper(editingPaper.id, updates)
+      if (result.success && result.data) {
+        setPapers(papers.map(p => p.id === editingPaper.id ? result.data! : p))
+        setEditingPaper(null)
+      }
+    } catch (error) {
+      console.error('Failed to update paper:', error)
+    }
+  }
+
+  const handleRecommendPaper = async (paperId: string) => {
+    try {
+      const result = await recommendPaperForPublication(paperId)
+      if (result.success && result.data) {
+        setPapers(papers.map(p => p.id === paperId ? result.data! : p))
+      }
+    } catch (error) {
+      console.error('Failed to recommend paper:', error)
+    }
+  }
+
+  const canRecommendPaper = (paper: Paper) => {
+    const paperReviews = reviews.filter(r => r.paper_id === paper.id)
+    if (paperReviews.length === 0) return false
+    const avgRating = paperReviews.reduce((sum, r) => sum + r.rating, 0) / paperReviews.length
+    return avgRating >= 4 && paper.status !== 'recommended_for_publication' && paper.status !== 'published'
+  }
+
+  const sendFeedbackToAuthor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!feedbackForm.paperId || !feedbackForm.message) return
+
+    try {
+      const paper = papers.find(p => p.id === feedbackForm.paperId)
+      if (!paper) return
+
+      await sendMessage(
+        paper.author_id,
+        `Feedback on "${paper.title}": ${feedbackForm.message}`
+      )
+
+      setFeedbackForm({ paperId: '', message: '' })
+      alert('Feedback sent to author successfully!')
+    } catch (error) {
+      console.error('Failed to send feedback:', error)
+      alert('Failed to send feedback')
+    }
+  }
+
+  const contactAdmin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!adminContactForm.message) return
+
+    try {
+      let messageContent = `Editor Message: ${adminContactForm.message}`
+
+      // If a paper is selected, include paper info
+      if (adminContactForm.paperId) {
+        const paper = papers.find(p => p.id === adminContactForm.paperId)
+        if (paper) {
+          messageContent = `Editor Message regarding "${paper.title}": ${adminContactForm.message}`
+        }
+      }
+
+      // Send message to admin (using placeholder ID - should be replaced with actual admin ID)
+      const result = await sendMessage(
+        'admin',
+        messageContent
+      )
+
+      if (result.success) {
+        setAdminContactForm({ paperId: '', message: '' })
+        alert('Message sent to admin successfully!')
+      }
+    } catch (error) {
+      console.error('Failed to contact admin:', error)
+      alert('Failed to send message to admin')
     }
   }
 
@@ -108,154 +219,359 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       <Header user={user} title="Editor Panel" onLogout={onLogout} />
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-            <div className="p-6 border-b dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-red-600">Papers for Review</h2>
-            </div>
-            <div className="p-6">
-              {papers.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">No papers assigned for review</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {papers.map(paper => {
-                    const status = getPaperStatus(paper)
-                    const existingReview = getExistingReview(paper)
-
-                    return (
-                      <div key={paper.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="font-semibold dark:text-white">{paper.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Email: {paper.author_email || 'Unknown'}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
-                            {paper.abstract && (
-                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 line-clamp-2">{paper.abstract}</p>
-                            )}
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-sm ${status === 'reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                            {status === 'reviewed' ? 'Reviewed' : 'Pending'}
-                          </span>
-                        </div>
-
-                        {existingReview && (
-                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <p className="text-sm font-medium dark:text-white">Rating: {existingReview.rating}/5</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{existingReview.comments}</p>
-                              </div>
-                              <span className={`px-2 py-1 rounded-full text-xs ${getRecommendationColor(existingReview.recommendation)}`}>
-                                {formatRecommendation(existingReview.recommendation)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {status === 'pending' && (
-                          <button
-                            onClick={() => setSelectedPaper(paper)}
-                            className="mt-3 bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors text-sm"
-                          >
-                            Review Paper
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {selectedPaper && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
+                <h2 className="text-xl font-semibold text-red-600">Papers for Review</h2>
               </div>
               <div className="p-6">
-                {selectedPaper.abstract && (
-                  <div className="mb-6">
-                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
+                {papers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No papers assigned for review</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {papers.map(paper => {
+                      const status = getPaperStatus(paper)
+                      const existingReview = getExistingReview(paper)
+
+                      return (
+                        <div key={paper.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h3 className="font-semibold dark:text-white">{paper.title}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Email: {paper.author_email || 'Unknown'}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
+                              {paper.abstract && (
+                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 line-clamp-2">{paper.abstract}</p>
+                              )}
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm ${status === 'reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {status === 'reviewed' ? 'Reviewed' : 'Pending'}
+                            </span>
+                          </div>
+
+                          {existingReview && (
+                            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <p className="text-sm font-medium dark:text-white">Rating: {existingReview.rating}/5</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{existingReview.comments}</p>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs ${getRecommendationColor(existingReview.recommendation)}`}>
+                                  {formatRecommendation(existingReview.recommendation)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {status === 'reviewed' && canRecommendPaper(paper) && (
+                            <div className="mt-3">
+                              <button
+                                onClick={() => handleRecommendPaper(paper.id)}
+                                className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
+                              >
+                                ⭐ Recommend for Publication
+                              </button>
+                            </div>
+                          )}
+
+                          {status === 'pending' && (
+                            <div className="mt-3 flex space-x-2">
+                              <button
+                                onClick={() => setSelectedPaper(paper)}
+                                className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors text-sm flex items-center"
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                Review
+                              </button>
+                              <button
+                                onClick={() => handleEditClick(paper)}
+                                className="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors text-sm flex items-center"
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </button>
+                              {paper.file_url && (
+                                <a
+                                  href={paper.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center"
+                                >
+                                  <Download className="w-4 h-4 mr-1" />
+                                  Download
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
 
-                <form onSubmit={handleSubmitReview} className="space-y-4">
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+
+            {editingPaper && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
+                    <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <form onSubmit={handleUpdatePaper} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={editForm.title}
+                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                          className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
+                        <textarea
+                          value={editForm.abstract}
+                          onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
+                          rows={6}
+                          className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) setEditForm({ ...editForm, file })
+                          }}
+                          className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPaper(null)}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedPaper && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="p-6 border-b dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
+                </div>
+                <div className="p-6">
+                  {selectedPaper.abstract && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmitReview} className="space-y-4">
+                    <div>
+                      <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Rating (1-5)
+                      </label>
+                      <select
+                        id="rating"
+                        value={reviewData.rating}
+                        onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        {[1, 2, 3, 4, 5].map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Recommendation
+                      </label>
+                      <select
+                        id="recommendation"
+                        value={reviewData.recommendation}
+                        onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="accept">Accept</option>
+                        <option value="minor_revision">Minor Revision</option>
+                        <option value="major_revision">Major Revision</option>
+                        <option value="reject">Reject</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Comments
+                      </label>
+                      <textarea
+                        id="comments"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        value={reviewData.comments}
+                        onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
+                        placeholder="Provide detailed feedback..."
+                        required
+                      />
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        type="submit"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        Submit Review
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPaper(null)}
+                        className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Feedback for Author Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Send Feedback to Author
+                </h2>
+              </div>
+              <div className="p-6">
+                <form onSubmit={sendFeedbackToAuthor} className="space-y-4">
                   <div>
-                    <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Rating (1-5)
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Paper
                     </label>
                     <select
-                      id="rating"
-                      value={reviewData.rating}
-                      onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      value={feedbackForm.paperId}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, paperId: e.target.value })}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      required
                     >
-                      {[1, 2, 3, 4, 5].map(num => (
-                        <option key={num} value={num}>{num}</option>
+                      <option value="">Choose a paper...</option>
+                      {papers.map(paper => (
+                        <option key={paper.id} value={paper.id}>
+                          {paper.title}
+                        </option>
                       ))}
                     </select>
                   </div>
-
                   <div>
-                    <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Recommendation
-                    </label>
-                    <select
-                      id="recommendation"
-                      value={reviewData.recommendation}
-                      onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    >
-                      <option value="accept">Accept</option>
-                      <option value="minor_revision">Minor Revision</option>
-                      <option value="major_revision">Major Revision</option>
-                      <option value="reject">Reject</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Comments
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Feedback Message
                     </label>
                     <textarea
-                      id="comments"
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      value={reviewData.comments}
-                      onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
-                      placeholder="Provide detailed feedback..."
+                      value={feedbackForm.message}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter your feedback for the author..."
                       required
                     />
                   </div>
-
-                  <div className="flex space-x-2">
-                    <button
-                      type="submit"
-                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      Submit Review
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPaper(null)}
-                      className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Feedback
+                  </button>
                 </form>
               </div>
             </div>
-          )}
+
+            {/* Contact Admin Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Contact Admin
+                </h2>
+              </div>
+              <div className="p-6">
+                <form onSubmit={contactAdmin} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Paper (Optional)
+                    </label>
+                    <select
+                      value={adminContactForm.paperId}
+                      onChange={(e) => setAdminContactForm({ ...adminContactForm, paperId: e.target.value })}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="">General message (no specific paper)</option>
+                      {papers.map(paper => (
+                        <option key={paper.id} value={paper.id}>
+                          {paper.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Message to Admin
+                    </label>
+                    <textarea
+                      value={adminContactForm.message}
+                      onChange={(e) => setAdminContactForm({ ...adminContactForm, message: e.target.value })}
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter your message to the admin..."
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send to Admin
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
   )
 }

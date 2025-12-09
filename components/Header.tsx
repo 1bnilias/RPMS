@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { User, getUnreadCount } from '@/lib/api'
-import { User as UserIcon } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { User, Notification, getUnreadCount, getNotifications, markNotificationRead } from '@/lib/api'
+import { User as UserIcon, Bell } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -15,14 +15,33 @@ interface HeaderProps {
 export default function Header({ user, title, onLogout }: HeaderProps) {
     const router = useRouter()
     const [unreadCount, setUnreadCount] = useState(0)
+    const [notifications, setNotifications] = useState<Notification[]>([])
+    const [showNotifications, setShowNotifications] = useState(false)
+    const notificationRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // Fetch unread count initially
+        // Fetch unread count and notifications initially
         fetchUnreadCount()
+        fetchNotifications()
 
         // Poll every 10 seconds
-        const interval = setInterval(fetchUnreadCount, 10000)
+        const interval = setInterval(() => {
+            fetchUnreadCount()
+            fetchNotifications()
+        }, 10000)
         return () => clearInterval(interval)
+    }, [])
+
+    useEffect(() => {
+        // Close dropdown when clicking outside
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+                setShowNotifications(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
     const fetchUnreadCount = async () => {
@@ -35,6 +54,33 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
             console.error('Failed to fetch unread count:', error)
         }
     }
+
+    const fetchNotifications = async () => {
+        try {
+            const result = await getNotifications()
+            if (result.success && result.data) {
+                setNotifications(result.data)
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications:', error)
+        }
+    }
+
+    const handleNotificationClick = async (notification: Notification) => {
+        // Mark as read
+        if (!notification.is_read) {
+            await markNotificationRead(notification.id)
+            fetchNotifications()
+        }
+
+        // Navigate to home page (which shows role-specific dashboard)
+        if (notification.paper_id) {
+            setShowNotifications(false)
+            router.push('/')
+        }
+    }
+
+    const unreadNotificationCount = notifications.filter(n => !n.is_read).length
 
     return (
         <header className="bg-white dark:bg-gray-800 shadow">
@@ -53,6 +99,52 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
                             </span>
                         )}
                     </button>
+                    <div ref={notificationRef} className="relative">
+                        <button
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className="relative text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                            title="Notifications"
+                        >
+                            <Bell className="w-6 h-6" />
+                            {unreadNotificationCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                                </span>
+                            )}
+                        </button>
+                        {showNotifications && (
+                            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto">
+                                <div className="p-4 border-b dark:border-gray-700">
+                                    <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {unreadNotificationCount} unread, {notifications.length - unreadNotificationCount} read
+                                    </p>
+                                </div>
+                                <div className="divide-y dark:divide-gray-700">
+                                    {notifications.length === 0 ? (
+                                        <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                                            No notifications
+                                        </div>
+                                    ) : (
+                                        notifications.map(notification => (
+                                            <div
+                                                key={notification.id}
+                                                onClick={() => handleNotificationClick(notification)}
+                                                className={`p-3 transition-colors ${notification.paper_id ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750' : ''
+                                                    } ${!notification.is_read ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                                                    }`}
+                                            >
+                                                <p className="text-sm text-gray-900 dark:text-white">{notification.message}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    {new Date(notification.created_at).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <button
                         onClick={() => router.push('/profile')}
                         className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
