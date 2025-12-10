@@ -6,6 +6,7 @@ import { Send, Search, MessageSquare, Paperclip, X, Reply, Forward } from 'lucid
 import MessageAttachment from './MessageAttachment'
 import ReplyPreview from './ReplyPreview'
 import ForwardModal from './ForwardModal'
+import Image from 'next/image'
 
 interface ChatInterfaceProps {
     currentUser: User
@@ -21,6 +22,8 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const [searchTerm, setSearchTerm] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const messageInputRef = useRef<HTMLInputElement>(null)
+    const prevMessagesLengthRef = useRef(0)
 
     // Attachment state
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -45,6 +48,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
     // Fetch messages when contact is selected
     useEffect(() => {
         if (selectedContact) {
+            prevMessagesLengthRef.current = 0
             fetchMessages(selectedContact.id)
             // Poll for new messages every 3 seconds
             const interval = setInterval(() => fetchMessages(selectedContact.id), 3000)
@@ -54,7 +58,10 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
 
     // Scroll to bottom when messages change
     useEffect(() => {
-        scrollToBottom()
+        if (messages.length > prevMessagesLengthRef.current) {
+            scrollToBottom()
+        }
+        prevMessagesLengthRef.current = messages.length
     }, [messages])
 
     const scrollToBottom = () => {
@@ -262,9 +269,15 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center space-x-3">
-                                        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold">
+                                        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold overflow-hidden">
                                             {contact.avatar ? (
-                                                <img src={contact.avatar} alt={contact.name} className="h-full w-full rounded-full object-cover" />
+                                                <Image
+                                                    src={contact.avatar}
+                                                    alt={contact.name}
+                                                    width={40}
+                                                    height={40}
+                                                    className="h-full w-full rounded-full object-cover"
+                                                />
                                             ) : (
                                                 contact.name.charAt(0).toUpperCase()
                                             )}
@@ -298,9 +311,15 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                         {/* Chat Header */}
                         <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
                             <div className="flex items-center space-x-3">
-                                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold">
+                                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold overflow-hidden">
                                     {selectedContact.avatar ? (
-                                        <img src={selectedContact.avatar} alt={selectedContact.name} className="h-full w-full rounded-full object-cover" />
+                                        <Image
+                                            src={selectedContact.avatar}
+                                            alt={selectedContact.name}
+                                            width={40}
+                                            height={40}
+                                            className="h-full w-full rounded-full object-cover"
+                                        />
                                     ) : (
                                         selectedContact.name.charAt(0).toUpperCase()
                                     )}
@@ -325,7 +344,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                     const showDate = index === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[index - 1].created_at).toDateString()
 
                                     return (
-                                        <div key={msg.id}>
+                                        <div key={msg.id} id={`message-${msg.id}`}>
                                             {showDate && (
                                                 <div className="text-center my-4">
                                                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
@@ -338,7 +357,10 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                     {!isMe && (
                                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
-                                                                onClick={() => setReplyingTo(msg)}
+                                                                onClick={() => {
+                                                                    setReplyingTo(msg)
+                                                                    messageInputRef.current?.focus()
+                                                                }}
                                                                 className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                                                                 title="Reply"
                                                             >
@@ -365,6 +387,25 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                         {msg.is_forwarded && (
                                                             <p className="text-xs italic opacity-75 mb-1">Forwarded</p>
                                                         )}
+                                                        {msg.reply_to_message_id && (() => {
+                                                            const repliedMsg = messages.find(m => m.id === msg.reply_to_message_id)
+                                                            if (repliedMsg) {
+                                                                return (
+                                                                    <div className="mb-2 p-2 rounded bg-black/5 dark:bg-white/10 border-l-2 border-red-500 text-xs cursor-pointer" onClick={() => {
+                                                                        const el = document.getElementById(`message-${repliedMsg.id}`)
+                                                                        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                                                    }}>
+                                                                        <p className="font-semibold opacity-75">
+                                                                            {repliedMsg.sender_id === currentUser.id ? 'You' : (contacts.find(c => c.id === repliedMsg.sender_id)?.name || 'Unknown')}
+                                                                        </p>
+                                                                        <p className="truncate opacity-75">
+                                                                            {repliedMsg.content || (repliedMsg.attachment_url ? '[Attachment]' : '')}
+                                                                        </p>
+                                                                    </div>
+                                                                )
+                                                            }
+                                                            return null
+                                                        })()}
                                                         {msg.content && <p className="text-sm">{msg.content}</p>}
                                                         {msg.attachment_url && (
                                                             <MessageAttachment
@@ -386,7 +427,10 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                     {isMe && (
                                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
-                                                                onClick={() => setReplyingTo(msg)}
+                                                                onClick={() => {
+                                                                    setReplyingTo(msg)
+                                                                    messageInputRef.current?.focus()
+                                                                }}
                                                                 className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                                                                 title="Reply"
                                                             >
@@ -472,6 +516,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         placeholder={uploading ? "Uploading..." : "Type a message..."}
                                         disabled={uploading || sending}
+                                        ref={messageInputRef}
                                         className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
                                     />
 

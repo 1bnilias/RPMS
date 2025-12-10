@@ -18,11 +18,21 @@ export interface Paper {
     abstract?: string
     content?: string
     author_id: string
-    status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'published'
+    status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'recommended_for_publication' | 'published'
     created_at: string
     updated_at: string
     author_name?: string
     author_email?: string
+    file_url?: string
+}
+
+export interface Notification {
+    id: number
+    user_id: string
+    message: string
+    is_read: boolean
+    created_at: string
+    paper_id?: string
 }
 
 export interface Review {
@@ -212,6 +222,12 @@ export async function deletePaper(id: string) {
     })
 }
 
+export async function recommendPaperForPublication(id: string) {
+    return request<Paper>(`/papers/${id}/recommend`, {
+        method: 'POST'
+    })
+}
+
 // Reviews
 export async function getReviews(paperId?: string) {
     const query = paperId ? `?paper_id=${paperId}` : ''
@@ -309,4 +325,36 @@ export async function uploadChatFile(file: File) {
 
 export async function getUnreadCount() {
     return request<{ count: number }>('/chat/unread-count')
+}
+
+export async function getNotifications() {
+    return request<Notification[]>('/notifications')
+}
+
+export async function markNotificationRead(id: number) {
+    return request(`/notifications/${id}/read`, {
+        method: 'PUT'
+    })
+}
+
+export async function uploadFile(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const token = localStorage.getItem('authToken')
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+
+    const response = await fetch(`${API_BASE_URL}/chat/upload`, {
+        method: 'POST',
+        headers,
+        body: formData
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        return { success: false, error: data.error || 'Upload failed' }
+    }
+
+    return { success: true, data }
 }

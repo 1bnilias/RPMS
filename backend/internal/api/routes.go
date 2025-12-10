@@ -72,14 +72,16 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			protected.PUT("/profile", server.UpdateProfile)
 			protected.PUT("/auth/password", server.ChangePassword)
 			protected.DELETE("/auth/account", server.DeleteAccount)
+			protected.GET("/notifications", server.GetNotifications)
+			protected.PUT("/notifications/:id/read", server.MarkNotificationRead)
 
-			// Paper routes
 			papers := protected.Group("/papers")
 			{
 				papers.GET("", server.GetPapers)
 				papers.POST("", middleware.AuthorOrAdmin(), server.CreatePaper)
 				papers.PUT("/:id", middleware.AuthorOrAdmin(), server.UpdatePaper)
 				papers.DELETE("/:id", middleware.AuthorOrAdmin(), server.DeletePaper)
+				papers.POST("/:id/recommend", middleware.EditorOrAdmin(), server.RecommendPaperForPublication)
 			}
 
 			// Review routes

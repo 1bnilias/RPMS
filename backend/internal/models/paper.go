@@ -11,6 +11,7 @@ type Paper struct {
 	Title     string    `json:"title" db:"title"`
 	Abstract  string    `json:"abstract" db:"abstract"`
 	Content   string    `json:"content" db:"content"`
+	FileUrl   string    `json:"file_url" db:"file_url"`
 	AuthorID  uuid.UUID `json:"author_id" db:"author_id"`
 	Status    string    `json:"status" db:"status"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
@@ -21,13 +22,15 @@ type CreatePaperRequest struct {
 	Title    string `json:"title" binding:"required,max=500"`
 	Abstract string `json:"abstract"`
 	Content  string `json:"content"`
+	FileUrl  string `json:"file_url"`
 }
 
 type UpdatePaperRequest struct {
 	Title    string `json:"title" binding:"required,max=500"`
 	Abstract string `json:"abstract"`
 	Content  string `json:"content"`
-	Status   string `json:"status" binding:"oneof=draft submitted under_review approved rejected published"`
+	FileUrl  string `json:"file_url"`
+	Status   string `json:"status" binding:"oneof=draft submitted under_review approved rejected recommended_for_publication published"`
 }
 
 type PaperWithAuthor struct {

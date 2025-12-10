@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { BookOpen } from 'lucide-react'
-import { User, Paper, createPaper, getPapers } from '@/lib/api'
+import { User, Paper, createPaper, getPapers, uploadFile } from '@/lib/api'
 import Header from './Header'
 
 interface AuthorDashboardProps {
@@ -12,16 +12,12 @@ interface AuthorDashboardProps {
 
 export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps) {
   const [papers, setPapers] = useState<Paper[]>([])
-  const [notifications, setNotifications] = useState<Array<{ id: number, message: string, timestamp: string }>>([])
   const [showSubmissionForm, setShowSubmissionForm] = useState(false)
-  const [newPaper, setNewPaper] = useState({ title: '', abstract: '', content: '' })
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [newPaper, setNewPaper] = useState<{ title: string, abstract: string, file: File | null }>({ title: '', abstract: '', file: null })
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchPapers()
-  }, [])
-
-  const fetchPapers = async () => {
+  const fetchPapers = useCallback(async () => {
     try {
       const result = await getPapers()
       if (result.success && result.data) {
@@ -36,36 +32,49 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
     } finally {
       setLoading(false)
     }
-  }
+  }, [user.id])
 
-  const handleSubmitPaper = async (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchPapers()
+  }, [fetchPapers])
+
+  const handleSubmitPaper = (e: React.FormEvent) => {
     e.preventDefault()
-    if (newPaper.title && newPaper.abstract) {
-      try {
-        const paperData = {
-          title: newPaper.title,
-          abstract: newPaper.abstract,
-          content: newPaper.content,
-          author_id: user.id,
-          status: 'draft' as const
-        }
-
-        const result = await createPaper(paperData)
-        if (result.success && result.data) {
-          setPapers([result.data, ...papers])
-          setNotifications([{
-            id: notifications.length + 1,
-            message: `Paper "${newPaper.title}" created successfully`,
-            timestamp: new Date().toLocaleString()
-          }, ...notifications])
-          setNewPaper({ title: '', abstract: '', content: '' })
-          setShowSubmissionForm(false)
-        }
-      } catch (error) {
-        console.error('Failed to create paper:', error)
-      }
+    if (newPaper.title && newPaper.abstract && newPaper.file) {
+      setShowConfirmation(true)
     }
   }
+
+  const confirmSubmit = async () => {
+    setShowConfirmation(false)
+    try {
+      // Upload file first
+      const uploadResult = await uploadFile(newPaper.file)
+      if (!uploadResult.success || !uploadResult.data) {
+        console.error('Failed to upload file:', uploadResult.error)
+        return
+      }
+
+      const paperData = {
+        title: newPaper.title,
+        abstract: newPaper.abstract,
+        content: '',
+        file_url: uploadResult.data.url,
+        author_id: user.id,
+        status: 'submitted' as const
+      }
+
+      const result = await createPaper(paperData)
+      if (result.success && result.data) {
+        setPapers([result.data, ...papers])
+        setNewPaper({ title: '', abstract: '', file: null })
+        setShowSubmissionForm(false)
+      }
+    } catch (error) {
+      console.error('Failed to create paper:', error)
+    }
+  }
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,8 +106,8 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header user={user} title="Author Dashboard" onLogout={onLogout} />
 
-      <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-red-600">My Papers</h2>
@@ -180,16 +189,19 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                     />
                   </div>
                   <div>
-                    <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Content
+                    <label htmlFor="file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Paper File (PDF, DOC, DOCX)
                     </label>
-                    <textarea
-                      id="content"
-                      value={newPaper.content}
-                      onChange={(e) => setNewPaper({ ...newPaper, content: e.target.value })}
-                      placeholder="Enter paper content"
-                      rows={8}
+                    <input
+                      id="file"
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) setNewPaper({ ...newPaper, file })
+                      }}
                       className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
                     />
                   </div>
                   <div className="flex space-x-2">
@@ -212,29 +224,31 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
             </div>
           )}
         </div>
-
-        <div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-            <div className="p-6 border-b dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-red-600">Notifications</h2>
-            </div>
-            <div className="p-6">
-              {notifications.length === 0 ? (
-                <p className="text-gray-600 text-center py-4">No notifications</p>
-              ) : (
-                <div className="space-y-3">
-                  {notifications.map(notification => (
-                    <div key={notification.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg">
-                      <p className="text-sm dark:text-yellow-100">{notification.message}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{notification.timestamp}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+      </div>
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Confirm Submission</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Are you sure you want to submit this paper? Please verify all details and the attached file before proceeding.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmation(false)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSubmit}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Confirm Submit
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
