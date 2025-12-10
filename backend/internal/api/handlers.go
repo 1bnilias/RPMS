@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"rpms-backend/internal/auth"
@@ -42,6 +44,21 @@ func (s *Server) Register(c *gin.Context) {
 		return
 	}
 
+	// Check if a user with this role already exists
+	ctx := c.Request.Context()
+	var roleCount int
+	roleCheckQuery := `SELECT COUNT(*) FROM users WHERE role = $1`
+	err = s.db.Pool.QueryRow(ctx, roleCheckQuery, req.Role).Scan(&roleCount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check role availability"})
+		return
+	}
+
+	if roleCount > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "A user with this role already exists. Each role can only be assigned to one user."})
+		return
+	}
+
 	// Create user
 	user := models.User{
 		Email:        req.Email,
@@ -53,7 +70,7 @@ func (s *Server) Register(c *gin.Context) {
 		Preferences:  map[string]interface{}{}, // Default
 	}
 
-	ctx := c.Request.Context()
+	// ctx is already declared above
 	query := `
 		INSERT INTO users (email, password_hash, name, role, avatar, bio, preferences)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -254,12 +271,69 @@ func (s *Server) DeleteAccount(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully"})
 }
 
+func (s *Server) GetNotifications(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	query := `
+		SELECT id, user_id, message, is_read, created_at, paper_id
+		FROM notifications
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := s.db.Pool.Query(ctx, query, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications"})
+		return
+	}
+	defer rows.Close()
+
+	var notifications []models.Notification
+	for rows.Next() {
+		var n models.Notification
+		err := rows.Scan(&n.ID, &n.UserID, &n.Message, &n.IsRead, &n.CreatedAt, &n.PaperID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan notification"})
+			return
+		}
+		notifications = append(notifications, n)
+	}
+
+	c.JSON(http.StatusOK, notifications)
+}
+
+func (s *Server) MarkNotificationRead(c *gin.Context) {
+	notificationID := c.Param("id")
+	userID, _ := c.Get("user_id")
+
+	ctx := c.Request.Context()
+	query := `
+		UPDATE notifications
+		SET is_read = true
+		WHERE id = $1 AND user_id = $2
+	`
+
+	_, err := s.db.Pool.Exec(ctx, query, notificationID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Notification marked as read"})
+}
+
 // Paper Handlers
 func (s *Server) GetPapers(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	query := `
-		SELECT p.id, p.title, p.abstract, p.content, p.author_id, p.status, p.created_at, p.updated_at,
+		SELECT p.id, p.title, p.abstract, p.content, p.file_url, p.author_id, p.status, p.created_at, p.updated_at,
 			   u.name as author_name, u.email as author_email
 		FROM papers p
 		LEFT JOIN users u ON p.author_id = u.id
@@ -277,7 +351,7 @@ func (s *Server) GetPapers(c *gin.Context) {
 	for rows.Next() {
 		var paper models.PaperWithAuthor
 		err := rows.Scan(
-			&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.AuthorID,
+			&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
 			&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
 			&paper.AuthorName, &paper.AuthorEmail,
 		)
@@ -309,19 +383,20 @@ func (s *Server) CreatePaper(c *gin.Context) {
 		Title:    req.Title,
 		Abstract: req.Abstract,
 		Content:  req.Content,
+		FileUrl:  req.FileUrl,
 		AuthorID: authorID,
-		Status:   "draft",
+		Status:   "submitted",
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO papers (title, abstract, content, author_id, status)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, title, abstract, content, author_id, status, created_at, updated_at
+		INSERT INTO papers (title, abstract, content, file_url, author_id, status)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.AuthorID, paper.Status).Scan(
-		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.AuthorID,
+	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status).Scan(
+		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
 		&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
 	)
 
@@ -329,6 +404,24 @@ func (s *Server) CreatePaper(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create paper"})
 		return
 	}
+
+	// Create notifications for all editors
+	go func() {
+		// Find all editors
+		rows, err := s.db.Pool.Query(context.Background(), "SELECT id FROM users WHERE role = 'editor'")
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var editorID uuid.UUID
+				if err := rows.Scan(&editorID); err == nil {
+					// Create notification
+					s.db.Pool.Exec(context.Background(),
+						"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+						editorID, "New paper submitted: "+paper.Title, paper.ID)
+				}
+			}
+		}
+	}()
 
 	c.JSON(http.StatusCreated, paper)
 }
@@ -349,14 +442,14 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 	ctx := c.Request.Context()
 	query := `
 		UPDATE papers
-		SET title = $1, abstract = $2, content = $3, status = $4, updated_at = NOW()
-		WHERE id = $5
-		RETURNING id, title, abstract, content, author_id, status, created_at, updated_at
+		SET title = $1, abstract = $2, content = $3, file_url = $4, status = $5, updated_at = NOW()
+		WHERE id = $6
+		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
 	`
 
 	var paper models.Paper
-	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Abstract, req.Content, req.Status, paperID).Scan(
-		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.AuthorID,
+	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Abstract, req.Content, req.FileUrl, req.Status, paperID).Scan(
+		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
 		&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
 	)
 
@@ -364,6 +457,83 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update paper"})
 		return
 	}
+
+	// If admin is publishing or rejecting a recommended paper, notify the editor
+	if req.Status == "published" || req.Status == "rejected" {
+		go func() {
+			// Find the editor who reviewed this paper
+			var editorID uuid.UUID
+			err := s.db.Pool.QueryRow(context.Background(),
+				"SELECT reviewer_id FROM reviews WHERE paper_id = $1 LIMIT 1",
+				paper.ID).Scan(&editorID)
+
+			if err == nil {
+				statusText := "published"
+				if req.Status == "rejected" {
+					statusText = "rejected"
+				}
+				message := fmt.Sprintf("Admin decision: Paper '%s' has been %s", paper.Title, statusText)
+				s.db.Pool.Exec(context.Background(),
+					"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+					editorID, message, paper.ID)
+			}
+		}()
+	}
+
+	c.JSON(http.StatusOK, paper)
+}
+
+func (s *Server) RecommendPaperForPublication(c *gin.Context) {
+	paperID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid paper ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	// Update paper status to recommended_for_publication
+	query := `
+		UPDATE papers
+		SET status = 'recommended_for_publication', updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
+	`
+
+	var paper models.Paper
+	err = s.db.Pool.QueryRow(ctx, query, paperID).Scan(
+		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
+		&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to recommend paper"})
+		return
+	}
+
+	// Notify all admins
+	go func() {
+		rows, err := s.db.Pool.Query(context.Background(), "SELECT id FROM users WHERE role = 'admin'")
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var adminID uuid.UUID
+				if err := rows.Scan(&adminID); err == nil {
+					message := fmt.Sprintf("Paper '%s' has been recommended for publication by an editor", paper.Title)
+					s.db.Pool.Exec(context.Background(),
+						"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+						adminID, message, paper.ID)
+				}
+			}
+		}
+	}()
+
+	// Store editor ID for later notification (we'll add a column for this)
+	// For now, we'll query reviews to find the editor
+	go func() {
+		s.db.Pool.Exec(context.Background(),
+			"UPDATE papers SET updated_at = NOW() WHERE id = $1",
+			paper.ID)
+	}()
 
 	c.JSON(http.StatusOK, paper)
 }
@@ -482,6 +652,26 @@ func (s *Server) CreateReview(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create review"})
 		return
 	}
+
+	// Send notification to paper author
+	go func() {
+		// Get paper details to find author
+		var authorID uuid.UUID
+		var paperTitle string
+		err := s.db.Pool.QueryRow(context.Background(),
+			"SELECT author_id, title FROM papers WHERE id = $1",
+			review.PaperID).Scan(&authorID, &paperTitle)
+
+		if err == nil {
+			// Create notification message with review details
+			message := fmt.Sprintf("Your paper '%s' has been reviewed. Rating: %d/5, Recommendation: %s",
+				paperTitle, review.Rating, review.Recommendation)
+
+			s.db.Pool.Exec(context.Background(),
+				"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+				authorID, message, review.PaperID)
+		}
+	}()
 
 	c.JSON(http.StatusCreated, review)
 }

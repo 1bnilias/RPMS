@@ -5,9 +5,11 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { updateProfile } from '@/lib/api'
 import { User as UserIcon, Mail, Calendar, Shield, Edit2, Save, X, ArrowLeft } from 'lucide-react'
+import Image from 'next/image'
+import Header from '@/components/Header'
 
 export default function ProfilePage() {
-    const { user, loading, refreshUser } = useAuth()
+    const { user, loading, refreshUser, logout } = useAuth()
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
     const [formData, setFormData] = useState({
@@ -34,7 +36,10 @@ export default function ProfilePage() {
         setSaving(true)
         setMessage({ type: '', text: '' })
         try {
-            const result = await updateProfile(formData)
+            const result = await updateProfile({
+                ...formData,
+                preferences: user?.preferences
+            })
             if (result.success) {
                 await refreshUser()
                 setIsEditing(false)
@@ -58,25 +63,23 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <Header user={user} title={user.name} onLogout={logout} />
+            <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-red-600 px-6 py-4 flex justify-between items-center">
-                        <div className="flex items-center space-x-4">
-                            <button
-                                onClick={() => router.back()}
-                                className="text-white hover:bg-red-700 p-2 rounded-full transition-colors"
-                                aria-label="Go back"
-                            >
-                                <ArrowLeft className="h-6 w-6" />
-                            </button>
-                            <h1 className="text-2xl font-bold text-white">User Profile</h1>
-                        </div>
+                    {/* Toolbar */}
+                    <div className="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                        <button
+                            onClick={() => router.back()}
+                            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                            <ArrowLeft className="h-5 w-5 mr-2" />
+                            Back
+                        </button>
                         <div className="flex space-x-3">
                             <button
                                 onClick={() => router.push('/settings')}
-                                className="flex items-center text-red-100 hover:text-white px-4 py-2 rounded-md transition-colors border border-red-400 hover:border-white"
+                                className="flex items-center text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-red-600 dark:hover:border-red-400"
                             >
                                 <Shield className="w-4 h-4 mr-2" />
                                 Settings
@@ -84,7 +87,7 @@ export default function ProfilePage() {
                             {!isEditing && (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="flex items-center text-white bg-red-700 hover:bg-red-800 px-4 py-2 rounded-md transition-colors"
+                                    className="flex items-center text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md transition-colors"
                                 >
                                     <Edit2 className="w-4 h-4 mr-2" />
                                     Edit Profile
@@ -106,7 +109,13 @@ export default function ProfilePage() {
                             <div className="flex-shrink-0 flex flex-col items-center space-y-4">
                                 <div className="h-32 w-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
                                     {user.avatar ? (
-                                        <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                                        <Image
+                                            src={user.avatar}
+                                            alt={user.name}
+                                            width={128}
+                                            height={128}
+                                            className="h-full w-full object-cover"
+                                        />
                                     ) : (
                                         <UserIcon className="h-16 w-16 text-gray-400" />
                                     )}

@@ -115,6 +115,16 @@ func RunMigrations(db *Database) error {
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 	);`
 
+	// Create notifications table
+	createNotificationsTable := `
+	CREATE TABLE IF NOT EXISTS notifications (
+		id SERIAL PRIMARY KEY,
+		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		message TEXT NOT NULL,
+		is_read BOOLEAN DEFAULT FALSE,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+	);`
+
 	// Create indexes
 	createIndexes := `
 	CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -155,6 +165,12 @@ func RunMigrations(db *Database) error {
 		ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN DEFAULT FALSE;
 	`
 
+	// Add file_url to papers
+	addFileUrlToPapers := `ALTER TABLE papers ADD COLUMN IF NOT EXISTS file_url TEXT;`
+
+	// Add paper_id to notifications
+	addPaperIdToNotifications := `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS paper_id UUID REFERENCES papers(id) ON DELETE CASCADE;`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -167,6 +183,9 @@ func RunMigrations(db *Database) error {
 		addPreferencesColumn,
 		alterEventsDateColumn,
 		addMessageAttachmentColumns,
+		createNotificationsTable,
+		addFileUrlToPapers,
+		addPaperIdToNotifications,
 	}
 
 	for _, migration := range migrations {

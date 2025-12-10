@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, updatePaper } from '@/lib/api'
+import { Users, MessageSquare, Send } from 'lucide-react'
+import { User, Paper, Review, getPapers, getReviews, updatePaper, sendMessage } from '@/lib/api'
 import Header from './Header'
 
 interface AdminPanelProps {
@@ -17,6 +17,7 @@ interface PaperWithReviews extends Paper {
 export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [papers, setPapers] = useState<PaperWithReviews[]>([])
   const [loading, setLoading] = useState(true)
+  const [editorContactForm, setEditorContactForm] = useState({ paperId: '', message: '' })
 
   useEffect(() => {
     fetchData()
@@ -39,7 +40,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             reviews: paperReviews
           }
         }).filter((paper: PaperWithReviews) =>
-          paper.status === 'under_review' && paper.reviews.length > 0
+          (paper.status === 'under_review' || paper.status === 'recommended_for_publication') && paper.reviews.length > 0
         )
 
         setPapers(papersWithReviews)
@@ -51,10 +52,10 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     }
   }
 
-  const handleApproval = async (paperId: string, approved: boolean) => {
+  const handlePublicationDecision = async (paperId: string, publish: boolean) => {
     try {
       const result = await updatePaper(paperId, {
-        status: approved ? 'approved' : 'rejected'
+        status: publish ? 'published' : 'rejected'
       })
 
       if (result.success) {
@@ -80,6 +81,37 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     return Object.entries(counts)
       .map(([rec, count]) => `${count} ${rec.replace(/_/g, ' ')}`)
       .join(', ')
+  }
+
+  const contactEditor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editorContactForm.message) return
+
+    try {
+      let messageContent = `Admin Message: ${editorContactForm.message}`
+
+      // If a paper is selected, include paper info and send to the editor who reviewed it
+      if (editorContactForm.paperId) {
+        const paper = papers.find(p => p.id === editorContactForm.paperId)
+        if (paper && paper.reviews.length > 0) {
+          const editorId = paper.reviews[0].reviewer_id
+          messageContent = `Admin Message regarding "${paper.title}": ${editorContactForm.message}`
+
+          const result = await sendMessage(editorId, messageContent)
+
+          if (result.success) {
+            setEditorContactForm({ paperId: '', message: '' })
+            alert('Message sent to editor successfully!')
+            return
+          }
+        }
+      }
+
+      alert('Please select a paper to contact its editor')
+    } catch (error) {
+      console.error('Failed to contact editor:', error)
+      alert('Failed to send message to editor')
+    }
   }
 
   if (loading) {
@@ -175,13 +207,13 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => handleApproval(paper.id, true)}
+                        onClick={() => handlePublicationDecision(paper.id, true)}
                         className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
                       >
-                        Approve
+                        Publish
                       </button>
                       <button
-                        onClick={() => handleApproval(paper.id, false)}
+                        onClick={() => handlePublicationDecision(paper.id, false)}
                         className="border border-red-600 text-red-600 px-4 py-2 rounded-md hover:bg-red-50 transition-colors"
                       >
                         Reject
@@ -191,6 +223,61 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Contact Editor Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-6 border-b dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Contact Editor
+              </h2>
+            </div>
+            <div className="p-6">
+              <form onSubmit={contactEditor} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Select Paper (Required)
+                  </label>
+                  <select
+                    value={editorContactForm.paperId}
+                    onChange={(e) => setEditorContactForm({ ...editorContactForm, paperId: e.target.value })}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    required
+                  >
+                    <option value="">Choose a paper...</option>
+                    {papers.map(paper => (
+                      <option key={paper.id} value={paper.id}>
+                        {paper.title}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Message will be sent to the editor who reviewed this paper
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Message to Editor
+                  </label>
+                  <textarea
+                    value={editorContactForm.message}
+                    onChange={(e) => setEditorContactForm({ ...editorContactForm, message: e.target.value })}
+                    rows={4}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    placeholder="Enter your message to the editor..."
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send to Editor
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>
