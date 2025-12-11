@@ -358,3 +358,18 @@ export async function uploadFile(file: File) {
 
     return { success: true, data }
 }
+
+export async function getAdminUser() {
+    return request<{ id: string; email: string; name: string; role: string }>('/users/admin')
+}
+
+export async function createNotification(userId: string, message: string, paperId?: string) {
+    return request<Notification>('/notifications', {
+        method: 'POST',
+        body: JSON.stringify({
+            user_id: userId,
+            message,
+            paper_id: paperId
+        })
+    })
+}

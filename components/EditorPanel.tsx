@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { FileText, Download, Upload, Edit, Clock, X, MessageSquare, Send } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, createReview, updatePaper, uploadFile, recommendPaperForPublication, sendMessage } from '@/lib/api'
+import { User, Paper, Review, getPapers, getReviews, createReview, updatePaper, uploadFile, recommendPaperForPublication, sendMessage, getAdminUser, createNotification } from '@/lib/api'
 import Header from './Header'
 
 interface EditorPanelProps {
@@ -19,10 +19,12 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const [reviewData, setReviewData] = useState({ rating: 5, comments: '', recommendation: 'accept' as const })
   const [feedbackForm, setFeedbackForm] = useState({ paperId: '', message: '' })
   const [adminContactForm, setAdminContactForm] = useState({ paperId: '', message: '' })
+  const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchData()
+    fetchAdminUser()
   }, [])
 
   const fetchData = async () => {
@@ -49,6 +51,16 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       setLoading(false)
     }
   }
+const fetchAdminUser = async () => {
+  try {
+    const result = await getAdminUser()
+    if (result.success && result.data) {
+      setAdminUserId(result.data.id)
+    }
+  } catch (error) {
+    console.error('Failed to fetch admin user:', error)
+  }
+}
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,36 +161,46 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     }
   }
 
-  const contactAdmin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!adminContactForm.message) return
+ const contactAdmin = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!adminContactForm.message) return
 
-    try {
-      let messageContent = `Editor Message: ${adminContactForm.message}`
-
-      // If a paper is selected, include paper info
-      if (adminContactForm.paperId) {
-        const paper = papers.find(p => p.id === adminContactForm.paperId)
-        if (paper) {
-          messageContent = `Editor Message regarding "${paper.title}": ${adminContactForm.message}`
-        }
-      }
-
-      // Send message to admin (using placeholder ID - should be replaced with actual admin ID)
-      const result = await sendMessage(
-        'admin',
-        messageContent
-      )
-
-      if (result.success) {
-        setAdminContactForm({ paperId: '', message: '' })
-        alert('Message sent to admin successfully!')
-      }
-    } catch (error) {
-      console.error('Failed to contact admin:', error)
-      alert('Failed to send message to admin')
-    }
+  if (!adminUserId) {
+    alert('Admin user not available. Please try again later.')
+    return
   }
+
+  try {
+    let messageContent = `Editor Message: ${adminContactForm.message}`
+    let paperId: string | undefined = undefined
+
+    // If a paper is selected, include paper info
+    if (adminContactForm.paperId) {
+      const paper = papers.find(p => p.id === adminContactForm.paperId)
+      if (paper) {
+        messageContent = `Editor Message regarding "${paper.title}": ${adminContactForm.message}`
+        paperId = paper.id
+      }
+    }
+
+    // Create notification for admin
+    const result = await createNotification(
+      adminUserId,
+      messageContent,
+      paperId
+    )
+
+    if (result.success) {
+      setAdminContactForm({ paperId: '', message: '' })
+      alert('Notification sent to admin successfully!')
+    } else {
+      alert('Failed to send notification: ' + (result.error || 'Unknown error'))
+    }
+  } catch (error) {
+    console.error('Failed to contact admin:', error)
+    alert('Failed to send notification to admin')
+  }
+}
 
   const getPaperStatus = (paper: Paper) => {
     const existingReview = reviews.find(r => r.paper_id === paper.id && r.reviewer_id === user.id)
