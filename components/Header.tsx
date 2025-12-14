@@ -76,14 +76,21 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
         // Navigate to home page (which shows role-specific dashboard)
         if (notification.paper_id) {
             setShowNotifications(false)
-            router.push('/')
+
+            // If we are already on the home page, manually set the hash to trigger scrolling
+            if (window.location.pathname === '/') {
+                window.location.hash = `paper-${notification.paper_id}`
+            } else {
+                // Otherwise navigate to the page with the hash
+                router.push(`/#paper-${notification.paper_id}`)
+            }
         }
     }
 
     const unreadNotificationCount = notifications.filter(n => !n.is_read).length
 
     return (
-        <header className="bg-white dark:bg-gray-800 shadow">
+        <header className="bg-white dark:bg-gray-800 shadow sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
                 <div className="flex items-center space-x-4">
@@ -130,11 +137,11 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
                                             <div
                                                 key={notification.id}
                                                 onClick={() => handleNotificationClick(notification)}
-                                                className={`p-3 transition-colors ${notification.paper_id ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750' : ''
+                                                className={`p-3 transition-colors ${notification.paper_id ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''
                                                     } ${!notification.is_read ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                                                     }`}
                                             >
-                                                <p className="text-sm text-gray-900 dark:text-white">{notification.message}</p>
+                                                <p className="text-sm text-gray-900 dark:text-gray-100">{notification.message}</p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                     {new Date(notification.created_at).toLocaleString()}
                                                 </p>

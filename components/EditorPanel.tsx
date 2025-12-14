@@ -51,16 +51,16 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       setLoading(false)
     }
   }
-const fetchAdminUser = async () => {
-  try {
-    const result = await getAdminUser()
-    if (result.success && result.data) {
-      setAdminUserId(result.data.id)
+  const fetchAdminUser = async () => {
+    try {
+      const result = await getAdminUser()
+      if (result.success && result.data) {
+        setAdminUserId(result.data.id)
+      }
+    } catch (error) {
+      console.error('Failed to fetch admin user:', error)
     }
-  } catch (error) {
-    console.error('Failed to fetch admin user:', error)
   }
-}
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,46 +161,55 @@ const fetchAdminUser = async () => {
     }
   }
 
- const contactAdmin = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!adminContactForm.message) return
+  const contactAdmin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!adminContactForm.message) return
 
-  if (!adminUserId) {
-    alert('Admin user not available. Please try again later.')
-    return
-  }
+    try {
+      let targetAdminId = adminUserId
 
-  try {
-    let messageContent = `Editor Message: ${adminContactForm.message}`
-    let paperId: string | undefined = undefined
-
-    // If a paper is selected, include paper info
-    if (adminContactForm.paperId) {
-      const paper = papers.find(p => p.id === adminContactForm.paperId)
-      if (paper) {
-        messageContent = `Editor Message regarding "${paper.title}": ${adminContactForm.message}`
-        paperId = paper.id
+      // If admin ID is missing, try to fetch it again
+      if (!targetAdminId) {
+        const adminResult = await getAdminUser()
+        if (adminResult.success && adminResult.data) {
+          targetAdminId = adminResult.data.id
+          setAdminUserId(targetAdminId)
+        } else {
+          alert('Admin user not available. Please try again later.')
+          return
+        }
       }
-    }
 
-    // Create notification for admin
-    const result = await createNotification(
-      adminUserId,
-      messageContent,
-      paperId
-    )
+      let messageContent = `Editor Message: ${adminContactForm.message}`
+      let paperId: string | undefined = undefined
 
-    if (result.success) {
-      setAdminContactForm({ paperId: '', message: '' })
-      alert('Notification sent to admin successfully!')
-    } else {
-      alert('Failed to send notification: ' + (result.error || 'Unknown error'))
+      // If a paper is selected, include paper info
+      if (adminContactForm.paperId) {
+        const paper = papers.find(p => p.id === adminContactForm.paperId)
+        if (paper) {
+          messageContent = `Editor Message regarding "${paper.title}": ${adminContactForm.message}`
+          paperId = paper.id
+        }
+      }
+
+      // Create notification for admin
+      const result = await createNotification(
+        targetAdminId,
+        messageContent,
+        paperId
+      )
+
+      if (result.success) {
+        setAdminContactForm({ paperId: '', message: '' })
+        alert('Notification sent to admin successfully!')
+      } else {
+        alert('Failed to send notification: ' + (result.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Failed to contact admin:', error)
+      alert('Failed to send notification to admin')
     }
-  } catch (error) {
-    console.error('Failed to contact admin:', error)
-    alert('Failed to send notification to admin')
   }
-}
 
   const getPaperStatus = (paper: Paper) => {
     const existingReview = reviews.find(r => r.paper_id === paper.id && r.reviewer_id === user.id)
@@ -341,7 +350,7 @@ const fetchAdminUser = async () => {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 sticky top-24">
 
             {editingPaper && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -447,10 +456,10 @@ const fetchAdminUser = async () => {
                         onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
                         className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       >
-                        <option value="accept">Accept</option>
+                        <option value="accept">Recommend Acceptance</option>
                         <option value="minor_revision">Minor Revision</option>
                         <option value="major_revision">Major Revision</option>
-                        <option value="reject">Reject</option>
+                        <option value="reject">Recommend Rejection</option>
                       </select>
                     </div>
 
