@@ -386,18 +386,23 @@ func (s *Server) CreatePaper(c *gin.Context) {
 		FileUrl:  req.FileUrl,
 		AuthorID: authorID,
 		Status:   "submitted",
+		Type:     req.Type,
+	}
+
+	if paper.Type == "" {
+		paper.Type = "research" // Default
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO papers (title, abstract, content, file_url, author_id, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
+		INSERT INTO papers (title, abstract, content, file_url, author_id, status, type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, title, abstract, content, file_url, author_id, status, type, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status).Scan(
+	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status, paper.Type).Scan(
 		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
-		&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
+		&paper.Status, &paper.Type, &paper.CreatedAt, &paper.UpdatedAt,
 	)
 
 	if err != nil {

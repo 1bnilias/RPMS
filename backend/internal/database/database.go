@@ -171,6 +171,9 @@ func RunMigrations(db *Database) error {
 	// Add paper_id to notifications
 	addPaperIdToNotifications := `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS paper_id UUID REFERENCES papers(id) ON DELETE CASCADE;`
 
+	// Add type to papers
+	addTypeToPapers := `ALTER TABLE papers ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'research';`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -186,6 +189,7 @@ func RunMigrations(db *Database) error {
 		createNotificationsTable,
 		addFileUrlToPapers,
 		addPaperIdToNotifications,
+		addTypeToPapers,
 	}
 
 	for _, migration := range migrations {

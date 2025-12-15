@@ -19,6 +19,7 @@ export interface Paper {
     content?: string
     author_id: string
     status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'recommended_for_publication' | 'published'
+    type?: string
     created_at: string
     updated_at: string
     author_name?: string

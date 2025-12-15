@@ -14,6 +14,7 @@ type Paper struct {
 	FileUrl   string    `json:"file_url" db:"file_url"`
 	AuthorID  uuid.UUID `json:"author_id" db:"author_id"`
 	Status    string    `json:"status" db:"status"`
+	Type      string    `json:"type" db:"type"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -23,6 +24,7 @@ type CreatePaperRequest struct {
 	Abstract string `json:"abstract"`
 	Content  string `json:"content"`
 	FileUrl  string `json:"file_url"`
+	Type     string `json:"type"`
 }
 
 type UpdatePaperRequest struct {
