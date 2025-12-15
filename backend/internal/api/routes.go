@@ -74,6 +74,8 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			protected.DELETE("/auth/account", server.DeleteAccount)
 			protected.GET("/notifications", server.GetNotifications)
 			protected.PUT("/notifications/:id/read", server.MarkNotificationRead)
+			protected.POST("/notifications", server.CreateNotification)
+			protected.GET("/users/admin", server.GetAdminUsers)
 
 			papers := protected.Group("/papers")
 			{

@@ -195,15 +195,27 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                 )
             )
 
-            await Promise.all(promises)
+            const results = await Promise.all(promises)
 
-            // If forwarding to current chat, update messages list
+            const successes = results.filter(r => r.success).length
+            const failures = results.length - successes
+
+            // If forwarding to current chat, update messages list if successful
             if (selectedContact && contactIds.includes(selectedContact.id)) {
-                // Refresh messages to show the forwarded one
-                fetchMessages(selectedContact.id)
+                // Check if the specific forward to current contact was successful
+                const currentContactIndex = contactIds.indexOf(selectedContact.id)
+                if (results[currentContactIndex].success) {
+                    fetchMessages(selectedContact.id)
+                }
             }
 
-            alert(`Message forwarded to ${contactIds.length} contact${contactIds.length > 1 ? 's' : ''} successfully`)
+            if (failures === 0) {
+                alert(`Message forwarded to ${successes} contact${successes > 1 ? 's' : ''} successfully`)
+            } else if (successes === 0) {
+                alert('Failed to forward message to any contact')
+            } else {
+                alert(`Message forwarded to ${successes} contact${successes > 1 ? 's' : ''}. Failed to send to ${failures} contact${failures > 1 ? 's' : ''}.`)
+            }
         } catch (error) {
             console.error('Failed to forward message:', error)
             alert('Failed to forward message')

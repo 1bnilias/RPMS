@@ -25,6 +25,16 @@ export default function LoginPage() {
             const result = await signIn(formData.email, formData.password)
             if (result.success && result.user) {
                 login(result.user)
+
+                // Check for redirect param
+                const searchParams = new URLSearchParams(window.location.search)
+                const redirect = searchParams.get('redirect')
+
+                if (redirect) {
+                    router.push(redirect)
+                } else {
+                    router.push('/home')
+                }
             } else {
                 setError(result.error || 'Failed to sign in')
             }

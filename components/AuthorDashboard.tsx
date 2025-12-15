@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { BookOpen } from 'lucide-react'
 import { User, Paper, createPaper, getPapers, uploadFile } from '@/lib/api'
 import Header from './Header'
@@ -16,6 +16,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [newPaper, setNewPaper] = useState<{ title: string, abstract: string, file: File | null }>({ title: '', abstract: '', file: null })
   const [loading, setLoading] = useState(true)
+  const submissionFormRef = useRef<HTMLDivElement>(null)
 
   const fetchPapers = useCallback(async () => {
     try {
@@ -112,7 +113,12 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
             <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-red-600">My Papers</h2>
               <button
-                onClick={() => setShowSubmissionForm(true)}
+                onClick={() => {
+                  setShowSubmissionForm(true)
+                  setTimeout(() => {
+                    submissionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }, 100)
+                }}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
               >
                 Submit New Paper
@@ -124,7 +130,12 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                   <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 dark:text-gray-400">No papers submitted yet</p>
                   <button
-                    onClick={() => setShowSubmissionForm(true)}
+                    onClick={() => {
+                      setShowSubmissionForm(true)
+                      setTimeout(() => {
+                        submissionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
+                    }}
                     className="mt-4 text-red-600 hover:text-red-700 font-medium"
                   >
                     Submit your first paper
@@ -154,7 +165,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
           </div>
 
           {showSubmissionForm && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div ref={submissionFormRef} className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-red-600">Submit New Paper</h2>
               </div>

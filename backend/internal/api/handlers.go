@@ -386,18 +386,23 @@ func (s *Server) CreatePaper(c *gin.Context) {
 		FileUrl:  req.FileUrl,
 		AuthorID: authorID,
 		Status:   "submitted",
+		Type:     req.Type,
+	}
+
+	if paper.Type == "" {
+		paper.Type = "research" // Default
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO papers (title, abstract, content, file_url, author_id, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
+		INSERT INTO papers (title, abstract, content, file_url, author_id, status, type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, title, abstract, content, file_url, author_id, status, type, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status).Scan(
+	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status, paper.Type).Scan(
 		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
-		&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
+		&paper.Status, &paper.Type, &paper.CreatedAt, &paper.UpdatedAt,
 	)
 
 	if err != nil {
@@ -806,4 +811,68 @@ func (s *Server) DeleteEvent(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
+}
+
+// GetAdminUsers returns admin users (for editor to contact admin)
+func (s *Server) GetAdminUsers(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	query := `
+		SELECT id, email, name, role
+		FROM users
+		WHERE role = 'admin'
+		LIMIT 1
+	`
+
+	var adminUser struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+		Role  string `json:"role"`
+	}
+
+	err := s.db.Pool.QueryRow(ctx, query).Scan(
+		&adminUser.ID, &adminUser.Email, &adminUser.Name, &adminUser.Role,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No admin user found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, adminUser)
+}
+
+// CreateNotification creates a notification for a user
+func (s *Server) CreateNotification(c *gin.Context) {
+	var req struct {
+		UserID  string  `json:"user_id" binding:"required"`
+		Message string  `json:"message" binding:"required"`
+		PaperID *string `json:"paper_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	query := `
+		INSERT INTO notifications (user_id, message, paper_id)
+		VALUES ($1, $2, $3)
+		RETURNING id, user_id, message, is_read, created_at, paper_id
+	`
+
+	var notification models.Notification
+	err := s.db.Pool.QueryRow(ctx, query, req.UserID, req.Message, req.PaperID).Scan(
+		&notification.ID, &notification.UserID, &notification.Message,
+		&notification.IsRead, &notification.CreatedAt, &notification.PaperID,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create notification"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, notification)
 }
