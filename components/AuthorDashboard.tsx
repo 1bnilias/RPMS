@@ -14,7 +14,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
   const [papers, setPapers] = useState<Paper[]>([])
   const [showSubmissionForm, setShowSubmissionForm] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
-  const [newPaper, setNewPaper] = useState<{ title: string, abstract: string, file: File | null }>({ title: '', abstract: '', file: null })
+  const [newPaper, setNewPaper] = useState<{ title: string, abstract: string, type: string, file: File | null }>({ title: '', abstract: '', type: 'Research Paper', file: null })
   const [loading, setLoading] = useState(true)
   const submissionFormRef = useRef<HTMLDivElement>(null)
 
@@ -62,13 +62,14 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
         content: '',
         file_url: uploadResult.data.url,
         author_id: user.id,
-        status: 'submitted' as const
+        status: 'submitted' as const,
+        type: newPaper.type
       }
 
       const result = await createPaper(paperData)
       if (result.success && result.data) {
         setPapers([result.data, ...papers])
-        setNewPaper({ title: '', abstract: '', file: null })
+        setNewPaper({ title: '', abstract: '', type: 'Research Paper', file: null })
         setShowSubmissionForm(false)
       }
     } catch (error) {
@@ -198,6 +199,23 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                       className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       required
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Paper Type
+                    </label>
+                    <select
+                      id="type"
+                      value={newPaper.type}
+                      onChange={(e) => setNewPaper({ ...newPaper, type: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="Research Paper">Research Paper</option>
+                      <option value="Thesis">Thesis</option>
+                      <option value="Review">Review</option>
+                      <option value="Case Study">Case Study</option>
+                      <option value="Methodology">Methodology</option>
+                    </select>
                   </div>
                   <div>
                     <label htmlFor="file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
