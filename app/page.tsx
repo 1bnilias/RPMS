@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from "@/components/ui/button"
-import { ArrowRight, BookOpen } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 export default function WelcomePage() {
   return (
@@ -11,9 +12,13 @@ export default function WelcomePage() {
 
         {/* Logo / Icon */}
         <div className="flex justify-center mb-8">
-          <div className="bg-white p-4 rounded-full shadow-xl">
-            <BookOpen className="h-16 w-16 text-red-800" />
-          </div>
+          <Image
+            src="/smu_logo_v2.png"
+            alt="SMU Logo"
+            width={150}
+            height={150}
+            className="object-contain drop-shadow-xl"
+          />
         </div>
 
         {/* University Name */}
