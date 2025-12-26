@@ -21,7 +21,33 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
   useEffect(() => {
     fetchData()
+    const interval = setInterval(fetchData, 5000) // Poll every 5 seconds
+    return () => clearInterval(interval)
   }, [])
+
+  // Handle hash navigation for deep linking
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash
+      if (hash && hash.startsWith('#paper-')) {
+        const paperId = hash.replace('#paper-', '')
+        const element = document.getElementById(`paper-${paperId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element.classList.add('ring-2', 'ring-red-500')
+          setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+        }
+      }
+    }
+
+    // Check on mount and when papers load
+    if (!loading && papers.length > 0) {
+      handleHashChange()
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [loading, papers])
 
   const fetchData = async () => {
     try {
@@ -40,11 +66,12 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             reviews: paperReviews
           }
         }).filter((paper: PaperWithReviews) =>
-          (paper.status === 'under_review' || paper.status === 'recommended_for_publication') && paper.reviews.length > 0
+          (paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication')
         )
 
         setPapers(papersWithReviews)
       }
+
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -129,154 +156,164 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header user={user} title="Admin Panel" onLogout={onLogout} />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-6 border-b dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-red-600">System Overview</h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900/50">
-                <h3 className="font-medium text-blue-900 dark:text-blue-100">Total Papers</h3>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{papers.length}</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">Ready for approval</p>
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600">System Overview</h2>
               </div>
-              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-900/50">
-                <h3 className="font-medium text-green-900 dark:text-green-100">Avg Review Score</h3>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {papers.length > 0 ? getAverageScore(papers.flatMap(p => p.reviews)) : '0'}
-                </p>
-                <p className="text-sm text-green-700 dark:text-green-300">Across all papers</p>
-              </div>
-              <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-900/50">
-                <h3 className="font-medium text-purple-900 dark:text-purple-100">Total Reviews</h3>
-                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {papers.reduce((acc, paper) => acc + paper.reviews.length, 0)}
-                </p>
-                <p className="text-sm text-purple-700 dark:text-purple-300">Completed reviews</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-6 border-b dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-red-600">Paper Approval</h2>
-          </div>
-          <div className="p-6">
-            {papers.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">No papers pending approval</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {papers.map(paper => (
-                  <div key={paper.id} className="border dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold dark:text-white">{paper.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {paper.reviews.length} Review{paper.reviews.length !== 1 ? 's' : ''}
-                        </span>
-                        <p className="text-lg font-bold text-blue-600">
-                          {getAverageScore(paper.reviews)}/5
-                        </p>
-                      </div>
-                    </div>
-
-                    {paper.abstract && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">{paper.abstract}</p>
-                    )}
-
-                    <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded mb-3">
-                      <p className="text-sm font-medium mb-2 dark:text-white">Review Summary:</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{getRecommendationSummary(paper.reviews)}</p>
-                      <div className="mt-2 space-y-1">
-                        {paper.reviews.map((review, index) => (
-                          <div key={review.id} className="text-xs text-gray-600 dark:text-gray-400">
-                            <span className="font-medium">Reviewer {index + 1}:</span> {review.comments ? review.comments.substring(0, 100) + '...' : ''}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handlePublicationDecision(paper.id, true)}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                      >
-                        Publish
-                      </button>
-                      <button
-                        onClick={() => handlePublicationDecision(paper.id, false)}
-                        className="border border-red-600 text-red-600 px-4 py-2 rounded-md hover:bg-red-50 transition-colors"
-                      >
-                        Reject
-                      </button>
-                    </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900/50">
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100">Total Papers</h3>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{papers.length}</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Ready for approval</p>
                   </div>
-                ))}
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-900/50">
+                    <h3 className="font-medium text-green-900 dark:text-green-100">Avg Review Score</h3>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {papers.length > 0 ? getAverageScore(papers.flatMap(p => p.reviews)) : '0'}
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300">Across all papers</p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-900/50">
+                    <h3 className="font-medium text-purple-900 dark:text-purple-100">Total Reviews</h3>
+                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                      {papers.reduce((acc, paper) => acc + paper.reviews.length, 0)}
+                    </p>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">Completed reviews</p>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600">Paper Approval</h2>
+              </div>
+              <div className="p-6">
+                {papers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No papers pending approval</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {papers.map(paper => (
+                      <div key={paper.id} id={`paper-${paper.id}`} className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="font-semibold dark:text-white">{paper.title}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {paper.reviews.length} Review{paper.reviews.length !== 1 ? 's' : ''}
+                            </span>
+                            <p className="text-lg font-bold text-blue-600">
+                              {paper.reviews.length > 0 ? `${getAverageScore(paper.reviews)}/5` : 'No Rating'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {paper.abstract && (
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">{paper.abstract}</p>
+                        )}
+
+                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded mb-3">
+                          <p className="text-sm font-medium mb-2 dark:text-white">Review Summary:</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {paper.reviews.length > 0 ? getRecommendationSummary(paper.reviews) : 'No reviews submitted yet.'}
+                          </p>
+                          <div className="mt-2 space-y-1">
+                            {paper.reviews.map((review, index) => (
+                              <div key={review.id} className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Reviewer {index + 1}:</span> {review.comments ? review.comments.substring(0, 100) + '...' : ''}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handlePublicationDecision(paper.id, true)}
+                            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                          >
+                            Publish
+                          </button>
+                          <button
+                            onClick={() => handlePublicationDecision(paper.id, false)}
+                            className="border border-red-600 text-red-600 px-4 py-2 rounded-md hover:bg-red-50 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Contact Editor Section */}
           </div>
 
-          {/* Contact Editor Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-            <div className="p-6 border-b dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                <MessageSquare className="w-5 h-5 mr-2" />
-                Contact Editor
-              </h2>
-            </div>
-            <div className="p-6">
-              <form onSubmit={contactEditor} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Select Paper (Required)
-                  </label>
-                  <select
-                    value={editorContactForm.paperId}
-                    onChange={(e) => setEditorContactForm({ ...editorContactForm, paperId: e.target.value })}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    required
+          <div className="space-y-6 sticky top-6">
+            {/* Contact Editor Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Contact Editor
+                </h2>
+              </div>
+              <div className="p-6">
+                <form onSubmit={contactEditor} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Paper (Required)
+                    </label>
+                    <select
+                      value={editorContactForm.paperId}
+                      onChange={(e) => setEditorContactForm({ ...editorContactForm, paperId: e.target.value })}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      required
+                    >
+                      <option value="">Choose a paper...</option>
+                      {papers.map(paper => (
+                        <option key={paper.id} value={paper.id}>
+                          {paper.title}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Message will be sent to the editor who reviewed this paper
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Message to Editor
+                    </label>
+                    <textarea
+                      value={editorContactForm.message}
+                      onChange={(e) => setEditorContactForm({ ...editorContactForm, message: e.target.value })}
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter your message to the editor..."
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
                   >
-                    <option value="">Choose a paper...</option>
-                    {papers.map(paper => (
-                      <option key={paper.id} value={paper.id}>
-                        {paper.title}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Message will be sent to the editor who reviewed this paper
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Message to Editor
-                  </label>
-                  <textarea
-                    value={editorContactForm.message}
-                    onChange={(e) => setEditorContactForm({ ...editorContactForm, message: e.target.value })}
-                    rows={4}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    placeholder="Enter your message to the editor..."
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Send to Editor
-                </button>
-              </form>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send to Editor
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>

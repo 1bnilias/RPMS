@@ -16,7 +16,7 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "baseUrl": ".",
     "paths": {
@@ -35,7 +35,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next-author/types/**/*.ts",
+    ".next-author/dev/types/**/*.ts",
+    ".next-staff/types/**/*.ts",
+    ".next-staff/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { BookOpen } from 'lucide-react'
 import { User, Paper, createPaper, getPapers, uploadFile } from '@/lib/api'
 import Header from './Header'
@@ -14,8 +14,9 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
   const [papers, setPapers] = useState<Paper[]>([])
   const [showSubmissionForm, setShowSubmissionForm] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
-  const [newPaper, setNewPaper] = useState<{ title: string, abstract: string, file: File | null }>({ title: '', abstract: '', file: null })
+  const [newPaper, setNewPaper] = useState<{ title: string, abstract: string, type: string, file: File | null }>({ title: '', abstract: '', type: 'Research Paper', file: null })
   const [loading, setLoading] = useState(true)
+  const submissionFormRef = useRef<HTMLDivElement>(null)
 
   const fetchPapers = useCallback(async () => {
     try {
@@ -61,13 +62,14 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
         content: '',
         file_url: uploadResult.data.url,
         author_id: user.id,
-        status: 'submitted' as const
+        status: 'submitted' as const,
+        type: newPaper.type
       }
 
       const result = await createPaper(paperData)
       if (result.success && result.data) {
         setPapers([result.data, ...papers])
-        setNewPaper({ title: '', abstract: '', file: null })
+        setNewPaper({ title: '', abstract: '', type: 'Research Paper', file: null })
         setShowSubmissionForm(false)
       }
     } catch (error) {
@@ -112,7 +114,12 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
             <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-red-600">My Papers</h2>
               <button
-                onClick={() => setShowSubmissionForm(true)}
+                onClick={() => {
+                  setShowSubmissionForm(true)
+                  setTimeout(() => {
+                    submissionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }, 100)
+                }}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
               >
                 Submit New Paper
@@ -124,7 +131,12 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                   <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 dark:text-gray-400">No papers submitted yet</p>
                   <button
-                    onClick={() => setShowSubmissionForm(true)}
+                    onClick={() => {
+                      setShowSubmissionForm(true)
+                      setTimeout(() => {
+                        submissionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
+                    }}
                     className="mt-4 text-red-600 hover:text-red-700 font-medium"
                   >
                     Submit your first paper
@@ -154,7 +166,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
           </div>
 
           {showSubmissionForm && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div ref={submissionFormRef} className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-red-600">Submit New Paper</h2>
               </div>
@@ -187,6 +199,23 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                       className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                       required
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Paper Type
+                    </label>
+                    <select
+                      id="type"
+                      value={newPaper.type}
+                      onChange={(e) => setNewPaper({ ...newPaper, type: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="Research Paper">Research Paper</option>
+                      <option value="Thesis">Thesis</option>
+                      <option value="Review">Review</option>
+                      <option value="Case Study">Case Study</option>
+                      <option value="Methodology">Methodology</option>
+                    </select>
                   </div>
                   <div>
                     <label htmlFor="file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
