@@ -3,11 +3,14 @@ package api
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"rpms-backend/internal/auth"
 	"rpms-backend/internal/config"
 	"rpms-backend/internal/database"
+	"rpms-backend/internal/email"
 	"rpms-backend/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -15,16 +18,18 @@ import (
 )
 
 type Server struct {
-	db         *database.Database
-	jwtManager *auth.JWTManager
-	config     *config.Config
+	db          *database.Database
+	jwtManager  *auth.JWTManager
+	config      *config.Config
+	emailSender *email.EmailSender
 }
 
 func NewServer(db *database.Database, cfg *config.Config) *Server {
 	return &Server{
-		db:         db,
-		jwtManager: auth.NewJWTManager(cfg),
-		config:     cfg,
+		db:          db,
+		jwtManager:  auth.NewJWTManager(cfg),
+		config:      cfg,
+		emailSender: email.NewEmailSender(cfg),
 	}
 }
 
@@ -44,47 +49,101 @@ func (s *Server) Register(c *gin.Context) {
 		return
 	}
 
-	// Check if a user with this role already exists
-	ctx := c.Request.Context()
-	var roleCount int
-	roleCheckQuery := `SELECT COUNT(*) FROM users WHERE role = $1`
-	err = s.db.Pool.QueryRow(ctx, roleCheckQuery, req.Role).Scan(&roleCount)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check role availability"})
-		return
-	}
-
-	if roleCount > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "A user with this role already exists. Each role can only be assigned to one user."})
-		return
-	}
+	// Generate 6-digit verification code
+	// Using a simple random number generator
+	rand.Seed(time.Now().UnixNano())
+	code := fmt.Sprintf("%06d", rand.Intn(1000000))
 
 	// Create user
 	user := models.User{
-		Email:        req.Email,
-		PasswordHash: hashedPassword,
-		Name:         req.Name,
-		Role:         req.Role,
-		Avatar:       "",                       // Default
-		Bio:          "",                       // Default
-		Preferences:  map[string]interface{}{}, // Default
+		Email:            req.Email,
+		PasswordHash:     hashedPassword,
+		Name:             req.Name,
+		Role:             "author",                 // Force role to author for public registration
+		Avatar:           "",                       // Default
+		Bio:              "",                       // Default
+		Preferences:      map[string]interface{}{}, // Default
+		IsVerified:       false,
+		VerificationCode: code,
 	}
 
-	// ctx is already declared above
+	ctx := c.Request.Context()
 	query := `
-		INSERT INTO users (email, password_hash, name, role, avatar, bio, preferences)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, email, name, role, avatar, bio, preferences, created_at, updated_at
+		INSERT INTO users (email, password_hash, name, role, avatar, bio, preferences, is_verified, verification_code)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, email, name, role, avatar, bio, preferences, is_verified, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences).Scan(
-		&user.ID, &user.Email, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.CreatedAt, &user.UpdatedAt,
+	err = s.db.Pool.QueryRow(ctx, query, user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences, user.IsVerified, user.VerificationCode).Scan(
+		&user.ID, &user.Email, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.IsVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		// Check for unique constraint violation on email
+		// This is a simplification, ideally check err code
+		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
 	}
+
+	// Send verification email
+	go func() {
+		err := s.emailSender.SendVerificationEmail(user.Email, user.VerificationCode)
+		if err != nil {
+			fmt.Printf("Failed to send verification email: %v\n", err)
+		}
+	}()
+
+	// Log verification code to console (Mock Email Service) - KEEPING FOR DEV
+	fmt.Printf("==================================================\n")
+	fmt.Printf("EMAIL VERIFICATION FOR %s\n", user.Email)
+	fmt.Printf("CODE: %s\n", user.VerificationCode)
+	fmt.Printf("==================================================\n")
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Registration successful. Please check your email for the verification code.",
+		"email":   user.Email,
+	})
+}
+
+func (s *Server) VerifyEmail(c *gin.Context) {
+	var req models.VerifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	var user models.User
+
+	// Check if user exists and code matches
+	query := `
+		SELECT id, email, password_hash, name, role, avatar, bio, preferences, created_at, updated_at
+		FROM users
+		WHERE email = $1 AND verification_code = $2
+	`
+
+	err := s.db.Pool.QueryRow(ctx, query, req.Email, req.Code).Scan(
+		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid verification code or email"})
+		return
+	}
+
+	// Update user as verified and clear code
+	updateQuery := `
+		UPDATE users
+		SET is_verified = TRUE, verification_code = ''
+		WHERE id = $1
+	`
+	_, err = s.db.Pool.Exec(ctx, updateQuery, user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user"})
+		return
+	}
+
+	user.IsVerified = true
 
 	// Generate JWT token
 	token, err := s.jwtManager.GenerateToken(&user)
@@ -98,7 +157,7 @@ func (s *Server) Register(c *gin.Context) {
 		Token: token,
 	}
 
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusOK, response)
 }
 
 func (s *Server) Login(c *gin.Context) {

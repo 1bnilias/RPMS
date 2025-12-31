@@ -7,16 +7,18 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID              `json:"id" db:"id"`
-	Email        string                 `json:"email" db:"email"`
-	PasswordHash string                 `json:"-" db:"password_hash"`
-	Name         string                 `json:"name" db:"name"`
-	Role         string                 `json:"role" db:"role"`
-	Avatar       string                 `json:"avatar" db:"avatar"`
-	Bio          string                 `json:"bio" db:"bio"`
-	Preferences  map[string]interface{} `json:"preferences" db:"preferences"`
-	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at" db:"updated_at"`
+	ID               uuid.UUID              `json:"id" db:"id"`
+	Email            string                 `json:"email" db:"email"`
+	PasswordHash     string                 `json:"-" db:"password_hash"`
+	Name             string                 `json:"name" db:"name"`
+	Role             string                 `json:"role" db:"role"`
+	Avatar           string                 `json:"avatar" db:"avatar"`
+	Bio              string                 `json:"bio" db:"bio"`
+	Preferences      map[string]interface{} `json:"preferences" db:"preferences"`
+	IsVerified       bool                   `json:"is_verified" db:"is_verified"`
+	VerificationCode string                 `json:"-" db:"verification_code"`
+	CreatedAt        time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time              `json:"updated_at" db:"updated_at"`
 }
 
 type CreateUserRequest struct {
@@ -29,6 +31,11 @@ type CreateUserRequest struct {
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
+}
+
+type VerifyEmailRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Code  string `json:"code" binding:"required,len=6"`
 }
 
 type LoginResponse struct {

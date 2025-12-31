@@ -61,6 +61,7 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 		{
 			auth.POST("/register", server.Register)
 			auth.POST("/login", server.Login)
+			auth.POST("/verify", server.VerifyEmail)
 		}
 
 		// Protected routes (authentication required)

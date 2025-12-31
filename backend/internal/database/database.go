@@ -174,6 +174,12 @@ func RunMigrations(db *Database) error {
 	// Add type to papers
 	addTypeToPapers := `ALTER TABLE papers ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'research';`
 
+	// Add verification columns to users
+	addVerificationColumns := `
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(6);
+	`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -190,6 +196,7 @@ func RunMigrations(db *Database) error {
 		addFileUrlToPapers,
 		addPaperIdToNotifications,
 		addTypeToPapers,
+		addVerificationColumns,
 	}
 
 	for _, migration := range migrations {
