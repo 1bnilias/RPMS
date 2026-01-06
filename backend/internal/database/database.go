@@ -180,6 +180,26 @@ func RunMigrations(db *Database) error {
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(6);
 	`
 
+	// Add category to events
+	addCategoryToEvents := `ALTER TABLE events ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other';`
+
+	// Add status to events
+	addStatusToEvents := `ALTER TABLE events ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft';`
+
+	// Create news table
+	createNewsTable := `
+	CREATE TABLE IF NOT EXISTS news (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		title VARCHAR(500) NOT NULL,
+		summary TEXT NOT NULL,
+		content TEXT NOT NULL,
+		category VARCHAR(100) NOT NULL,
+		status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+		editor_id UUID REFERENCES users(id) ON DELETE CASCADE,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+	);`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -197,6 +217,10 @@ func RunMigrations(db *Database) error {
 		addPaperIdToNotifications,
 		addTypeToPapers,
 		addVerificationColumns,
+		addVerificationColumns,
+		addCategoryToEvents,
+		addStatusToEvents,
+		createNewsTable,
 	}
 
 	for _, migration := range migrations {

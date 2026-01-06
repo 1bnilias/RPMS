@@ -64,6 +64,10 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			auth.POST("/verify", server.VerifyEmail)
 		}
 
+		// Public routes
+		v1.GET("/events", server.GetEvents)
+		v1.GET("/news", server.GetNews)
+
 		// Protected routes (authentication required)
 		protected := v1.Group("/")
 		protected.Use(middleware.AuthMiddleware(jwtManager))
@@ -97,10 +101,19 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			// Event routes
 			events := protected.Group("/events")
 			{
-				events.GET("", server.GetEvents)
 				events.POST("", middleware.CoordinatorOrAdmin(), server.CreateEvent)
 				events.PUT("/:id", middleware.CoordinatorOrAdmin(), server.UpdateEvent)
+				events.PUT("/:id/publish", middleware.CoordinatorOrAdmin(), server.PublishEvent)
 				events.DELETE("/:id", middleware.CoordinatorOrAdmin(), server.DeleteEvent)
+			}
+
+			// News routes
+			news := protected.Group("/news")
+			{
+				news.POST("", middleware.EditorOrAdmin(), server.CreateNews)
+				news.PUT("/:id", middleware.EditorOrAdmin(), server.UpdateNews)
+				news.PUT("/:id/publish", middleware.EditorOrAdmin(), server.PublishNews)
+				news.DELETE("/:id", middleware.EditorOrAdmin(), server.DeleteNews)
 			}
 
 			// Chat routes

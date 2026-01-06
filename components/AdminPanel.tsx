@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, MessageSquare, Send } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, updatePaper, sendMessage } from '@/lib/api'
+import { Users, MessageSquare, Send, X, FileText, Download } from 'lucide-react'
+import { User, Paper, Review, getPapers, getReviews, updatePaper, sendMessage, uploadFile } from '@/lib/api'
 import Header from './Header'
 
 interface AdminPanelProps {
@@ -17,6 +17,7 @@ interface PaperWithReviews extends Paper {
 export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [papers, setPapers] = useState<PaperWithReviews[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedPaper, setSelectedPaper] = useState<PaperWithReviews | null>(null)
   const [editorContactForm, setEditorContactForm] = useState({ paperId: '', message: '' })
 
   useEffect(() => {
@@ -201,10 +202,15 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 ) : (
                   <div className="space-y-4">
                     {papers.map(paper => (
-                      <div key={paper.id} id={`paper-${paper.id}`} className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300">
+                      <div
+                        key={paper.id}
+                        id={`paper-${paper.id}`}
+                        onClick={() => setSelectedPaper(paper)}
+                        className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer group"
+                      >
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h3 className="font-semibold dark:text-white">{paper.title}</h3>
+                            <h3 className="font-semibold dark:text-white group-hover:text-red-600 transition-colors">{paper.title}</h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
                           </div>
@@ -222,33 +228,11 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                           <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">{paper.abstract}</p>
                         )}
 
-                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded mb-3">
+                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
                           <p className="text-sm font-medium mb-2 dark:text-white">Review Summary:</p>
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             {paper.reviews.length > 0 ? getRecommendationSummary(paper.reviews) : 'No reviews submitted yet.'}
                           </p>
-                          <div className="mt-2 space-y-1">
-                            {paper.reviews.map((review, index) => (
-                              <div key={review.id} className="text-xs text-gray-600 dark:text-gray-400">
-                                <span className="font-medium">Reviewer {index + 1}:</span> {review.comments ? review.comments.substring(0, 100) + '...' : ''}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handlePublicationDecision(paper.id, true)}
-                            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                          >
-                            Publish
-                          </button>
-                          <button
-                            onClick={() => handlePublicationDecision(paper.id, false)}
-                            className="border border-red-600 text-red-600 px-4 py-2 rounded-md hover:bg-red-50 transition-colors"
-                          >
-                            Reject
-                          </button>
                         </div>
                       </div>
                     ))}
@@ -318,6 +302,103 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
           </div>
         </div>
       </div>
+
+      {/* Paper Details Modal */}
+      {selectedPaper && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <h2 className="text-xl font-semibold text-red-600">Paper Details</h2>
+              <button onClick={() => setSelectedPaper(null)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <h3 className="text-2xl font-bold dark:text-white mb-2">{selectedPaper.title}</h3>
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  <p><span className="font-medium">Author:</span> {selectedPaper.author_name}</p>
+                  <p><span className="font-medium">Email:</span> {selectedPaper.author_email}</p>
+                  <p><span className="font-medium">Submitted:</span> {new Date(selectedPaper.created_at).toLocaleDateString()}</p>
+                  <p><span className="font-medium">Status:</span> <span className="capitalize">{selectedPaper.status.replace(/_/g, ' ')}</span></p>
+                </div>
+              </div>
+
+              {selectedPaper.abstract && (
+                <div>
+                  <h4 className="font-semibold dark:text-white mb-2">Abstract</h4>
+                  <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg leading-relaxed">
+                    {selectedPaper.abstract}
+                  </p>
+                </div>
+              )}
+
+              {selectedPaper.file_url && (
+                <div>
+                  <h4 className="font-semibold dark:text-white mb-2">Manuscript</h4>
+                  <a
+                    href={selectedPaper.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Paper
+                  </a>
+                </div>
+              )}
+
+              <div className="border-t dark:border-gray-700 pt-6">
+                <h4 className="text-lg font-semibold dark:text-white mb-4">Reviews & Ratings</h4>
+                {selectedPaper.reviews.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400 italic">No reviews submitted yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedPaper.reviews.map((review, index) => (
+                      <div key={review.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border dark:border-gray-600">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-bold text-red-600">Reviewer {index + 1}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium dark:text-white">Rating: {review.rating}/5</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${review.recommendation === 'accept' ? 'bg-green-100 text-green-800' :
+                              review.recommendation === 'reject' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {review.recommendation.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{review.comments}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t dark:border-gray-700 pt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    handlePublicationDecision(selectedPaper.id, false)
+                    setSelectedPaper(null)
+                  }}
+                  className="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 transition-colors font-medium"
+                >
+                  Reject Paper
+                </button>
+                <button
+                  onClick={() => {
+                    handlePublicationDecision(selectedPaper.id, true)
+                    setSelectedPaper(null)
+                  }}
+                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                >
+                  Publish Paper
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

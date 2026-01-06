@@ -54,13 +54,25 @@ export interface Event {
     id: string
     title: string
     description?: string
+    category?: string
+    status?: string
     date: string
     location?: string
-    coordinator_id: string
+    coordinator_id?: string
+    created_at?: string
+    updated_at?: string
+}
+
+export interface News {
+    id: string
+    title: string
+    summary: string
+    content: string
+    category: string
+    status: string
+    editor_id: string
     created_at: string
     updated_at: string
-    coordinator_name?: string
-    coordinator_email?: string
 }
 
 export interface Message {
@@ -243,8 +255,15 @@ export async function createReview(review: Omit<Review, 'id' | 'created_at' | 'u
 }
 
 // Events
-export async function getEvents() {
-    return request<Event[]>('/events')
+export async function getEvents(status?: string) {
+    const query = status ? `?status=${status}` : ''
+    return request<Event[]>(`/events${query}`)
+}
+
+export async function publishEvent(id: string) {
+    return request<Event>(`/events/${id}/publish`, {
+        method: 'PUT',
+    })
 }
 
 export async function createEvent(event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) {
@@ -267,6 +286,37 @@ export async function deleteEvent(id: string) {
     })
 }
 
+// News
+export async function getNews(status?: string) {
+    const query = status ? `?status=${status}` : ''
+    return request<News[]>(`/news${query}`)
+}
+
+export async function createNews(news: Omit<News, 'id' | 'editor_id' | 'status' | 'created_at' | 'updated_at'>) {
+    return request<News>('/news', {
+        method: 'POST',
+        body: JSON.stringify(news),
+    })
+}
+
+export async function updateNews(id: string, updates: Partial<News>) {
+    return request<News>(`/news/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+    })
+}
+
+export async function deleteNews(id: string) {
+    return request(`/news/${id}`, {
+        method: 'DELETE',
+    })
+}
+
+export async function publishNews(id: string) {
+    return request<News>(`/news/${id}/publish`, {
+        method: 'PUT',
+    })
+}
 
 // Chat
 export async function getContacts() {

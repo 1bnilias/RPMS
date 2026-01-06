@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Calendar, MapPin } from 'lucide-react'
+import { getEvents, Event } from '@/lib/api'
 
 export default function WelcomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)

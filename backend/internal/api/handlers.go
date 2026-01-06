@@ -743,16 +743,24 @@ func (s *Server) CreateReview(c *gin.Context) {
 // Event Handlers
 func (s *Server) GetEvents(c *gin.Context) {
 	ctx := c.Request.Context()
+	status := c.Query("status")
 
 	query := `
-		SELECT e.id, e.title, e.description, e.date, e.location, e.coordinator_id, e.created_at, e.updated_at,
+		SELECT e.id, e.title, e.description, e.category, e.status, e.date, e.location, e.coordinator_id, e.created_at, e.updated_at,
 			   c.name as coordinator_name, c.email as coordinator_email
 		FROM events e
 		LEFT JOIN users c ON e.coordinator_id = c.id
-		ORDER BY e.date ASC
 	`
 
-	rows, err := s.db.Pool.Query(ctx, query)
+	var args []interface{}
+	if status != "" {
+		query += " WHERE e.status = $1"
+		args = append(args, status)
+	}
+
+	query += " ORDER BY e.date ASC"
+
+	rows, err := s.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events"})
 		return
@@ -763,7 +771,7 @@ func (s *Server) GetEvents(c *gin.Context) {
 	for rows.Next() {
 		var event models.EventWithCoordinator
 		err := rows.Scan(
-			&event.ID, &event.Title, &event.Description, &event.Date, &event.Location, &event.CoordinatorID,
+			&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location, &event.CoordinatorID,
 			&event.CreatedAt, &event.UpdatedAt, &event.CoordinatorName, &event.CoordinatorEmail,
 		)
 		if err != nil {
@@ -774,6 +782,35 @@ func (s *Server) GetEvents(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, events)
+}
+
+func (s *Server) PublishEvent(c *gin.Context) {
+	eventID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	query := `
+		UPDATE events
+		SET status = 'published', updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, title, description, category, status, date, location, coordinator_id, created_at, updated_at
+	`
+
+	var event models.Event
+	err = s.db.Pool.QueryRow(ctx, query, eventID).Scan(
+		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location,
+		&event.CoordinatorID, &event.CreatedAt, &event.UpdatedAt,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish event"})
+		return
+	}
+
+	c.JSON(http.StatusOK, event)
 }
 
 func (s *Server) CreateEvent(c *gin.Context) {
@@ -793,6 +830,8 @@ func (s *Server) CreateEvent(c *gin.Context) {
 	event := models.Event{
 		Title:         req.Title,
 		Description:   req.Description,
+		Category:      req.Category,
+		Status:        "draft",
 		Date:          req.Date,
 		Location:      req.Location,
 		CoordinatorID: coordinatorID,
@@ -800,13 +839,13 @@ func (s *Server) CreateEvent(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO events (title, description, date, location, coordinator_id)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, title, description, date, location, coordinator_id, created_at, updated_at
+		INSERT INTO events (title, description, category, status, date, location, coordinator_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, title, description, category, status, date, location, coordinator_id, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, event.Title, event.Description, event.Date, event.Location, event.CoordinatorID).Scan(
-		&event.ID, &event.Title, &event.Description, &event.Date, &event.Location,
+	err = s.db.Pool.QueryRow(ctx, query, event.Title, event.Description, event.Category, event.Status, event.Date, event.Location, event.CoordinatorID).Scan(
+		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location,
 		&event.CoordinatorID, &event.CreatedAt, &event.UpdatedAt,
 	)
 
@@ -834,14 +873,14 @@ func (s *Server) UpdateEvent(c *gin.Context) {
 	ctx := c.Request.Context()
 	query := `
 		UPDATE events
-		SET title = $1, description = $2, date = $3, location = $4, updated_at = NOW()
-		WHERE id = $5
-		RETURNING id, title, description, date, location, coordinator_id, created_at, updated_at
+		SET title = $1, description = $2, category = $3, date = $4, location = $5, updated_at = NOW()
+		WHERE id = $6
+		RETURNING id, title, description, category, status, date, location, coordinator_id, created_at, updated_at
 	`
 
 	var event models.Event
-	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Description, req.Date, req.Location, eventID).Scan(
-		&event.ID, &event.Title, &event.Description, &event.Date, &event.Location,
+	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Description, req.Category, req.Date, req.Location, eventID).Scan(
+		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location,
 		&event.CoordinatorID, &event.CreatedAt, &event.UpdatedAt,
 	)
 
