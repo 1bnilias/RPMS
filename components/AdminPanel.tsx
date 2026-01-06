@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, MessageSquare, Send, X, FileText, Download } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, updatePaper, sendMessage, uploadFile } from '@/lib/api'
+import { Users, MessageSquare, Send, X, FileText, Download, Bell, CheckCircle } from 'lucide-react'
+import { User, Paper, Review, Notification, getPapers, getReviews, updatePaper, sendMessage, uploadFile, getNotifications, markNotificationRead } from '@/lib/api'
 import Header from './Header'
 
 interface AdminPanelProps {
@@ -17,6 +17,7 @@ interface PaperWithReviews extends Paper {
 export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [papers, setPapers] = useState<PaperWithReviews[]>([])
   const [loading, setLoading] = useState(true)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [selectedPaper, setSelectedPaper] = useState<PaperWithReviews | null>(null)
   const [editorContactForm, setEditorContactForm] = useState({ paperId: '', message: '' })
 
@@ -71,6 +72,11 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
         )
 
         setPapers(papersWithReviews)
+      }
+
+      const notificationsResult = await getNotifications()
+      if (notificationsResult.success && notificationsResult.data) {
+        setNotifications(notificationsResult.data)
       }
 
     } catch (error) {
@@ -139,6 +145,38 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     } catch (error) {
       console.error('Failed to contact editor:', error)
       alert('Failed to send message to editor')
+    }
+  }
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (notification.paper_id) {
+      const paper = papers.find(p => p.id === notification.paper_id)
+      if (paper) {
+        setSelectedPaper(paper)
+      }
+    }
+
+    if (!notification.is_read) {
+      try {
+        const result = await markNotificationRead(notification.id)
+        if (result.success) {
+          setNotifications(notifications.map(n =>
+            n.id === notification.id ? { ...n, is_read: true } : n
+          ))
+        }
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error)
+      }
+    }
+  }
+
+  const markAllAsRead = async () => {
+    try {
+      const unread = notifications.filter(n => !n.is_read)
+      await Promise.all(unread.map(n => markNotificationRead(n.id)))
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })))
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
     }
   }
 
@@ -245,6 +283,57 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
           </div>
 
           <div className="space-y-6 sticky top-6">
+            {/* Notifications Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                  <Bell className="w-5 h-5 mr-2" />
+                  Notifications
+                </h2>
+                {notifications.some(n => !n.is_read) && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+              <div className="p-6">
+                {notifications.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No notifications</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {notifications.map(notification => (
+                      <div
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification)}
+                        className={`p-3 rounded-lg border transition-colors cursor-pointer ${notification.is_read
+                          ? 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700'
+                          : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 ring-1 ring-red-100 dark:ring-red-900/20'
+                          }`}
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <p className={`text-sm ${notification.is_read ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'}`}>
+                            {notification.message}
+                          </p>
+                          {!notification.is_read && (
+                            <div className="w-2 h-2 bg-red-600 rounded-full mt-1.5 shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2">
+                          {new Date(notification.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Contact Editor Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
