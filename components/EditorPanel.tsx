@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Download, Upload, Edit, Clock, X, MessageSquare, Send } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, createReview, updatePaper, uploadFile, recommendPaperForPublication, sendMessage, getAdminUser, createNotification } from '@/lib/api'
+import { FileText, Download, Upload, Edit, Clock, X, MessageSquare, Send, Newspaper, Plus } from 'lucide-react'
+import { User, Paper, Review, News, getPapers, getReviews, createReview, updatePaper, uploadFile, recommendPaperForPublication, sendMessage, getAdminUser, createNotification, getNews, createNews, updateNews, deleteNews, publishNews } from '@/lib/api'
 import Header from './Header'
 
 interface EditorPanelProps {
@@ -22,6 +22,17 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // News state
+  const [news, setNews] = useState<News[]>([])
+  const [showNewsForm, setShowNewsForm] = useState(false)
+  const [editingNews, setEditingNews] = useState<News | null>(null)
+  const [newsForm, setNewsForm] = useState({
+    title: '',
+    summary: '',
+    content: '',
+    category: 'Research'
+  })
+
   useEffect(() => {
     fetchData()
     fetchAdminUser()
@@ -31,11 +42,12 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     try {
       const papersResult = await getPapers()
       const reviewsResult = await getReviews()
+      const newsResult = await getNews()
 
       if (papersResult.success && papersResult.data) {
-        // Filter submitted papers that need review
+        // Filter submitted papers (don't filter out reviewed ones)
         const submittedPapers = papersResult.data.filter((paper: Paper) =>
-          paper.status === 'submitted' || paper.status === 'under_review'
+          paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication' || paper.status === 'reviewed'
         )
         setPapers(submittedPapers)
       }
@@ -44,6 +56,9 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
         setReviews(reviewsResult.data)
       }
 
+      if (newsResult.success && newsResult.data) {
+        setNews(newsResult.data)
+      }
 
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -122,23 +137,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     }
   }
 
-  const handleRecommendPaper = async (paperId: string) => {
-    try {
-      const result = await recommendPaperForPublication(paperId)
-      if (result.success && result.data) {
-        setPapers(papers.map(p => p.id === paperId ? result.data! : p))
-      }
-    } catch (error) {
-      console.error('Failed to recommend paper:', error)
-    }
-  }
 
-  const canRecommendPaper = (paper: Paper) => {
-    const paperReviews = reviews.filter(r => r.paper_id === paper.id)
-    if (paperReviews.length === 0) return false
-    const avgRating = paperReviews.reduce((sum, r) => sum + r.rating, 0) / paperReviews.length
-    return avgRating >= 4 && paper.status !== 'recommended_for_publication' && paper.status !== 'published'
-  }
 
   const sendFeedbackToAuthor = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -234,6 +233,75 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     return recommendation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   }
 
+  // News handlers
+  const handleCreateNews = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const result = await createNews(newsForm)
+      if (result.success && result.data) {
+        setNews([result.data, ...news])
+        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+        setShowNewsForm(false)
+      }
+    } catch (error) {
+      console.error('Failed to create news:', error)
+    }
+  }
+
+  const handleUpdateNews = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingNews) return
+
+    try {
+      const result = await updateNews(editingNews.id, newsForm)
+      if (result.success && result.data) {
+        setNews(news.map(n => n.id === editingNews.id ? result.data! : n))
+        setEditingNews(null)
+        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+        setShowNewsForm(false)
+      }
+    } catch (error) {
+      console.error('Failed to update news:', error)
+    }
+  }
+
+  const handlePublishNews = async (id: string) => {
+    try {
+      const result = await publishNews(id)
+      if (result.success && result.data) {
+        setNews(news.map(n => n.id === id ? result.data! : n))
+      }
+    } catch (error) {
+      console.error('Failed to publish news:', error)
+    }
+  }
+
+  const handleDeleteNews = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this news post?')) return
+
+    try {
+      const result = await deleteNews(id)
+      if (result.success) {
+        setNews(news.filter(n => n.id !== id))
+      }
+    } catch (error) {
+      console.error('Failed to delete news:', error)
+    }
+  }
+
+  const handleEditNewsClick = (newsItem: News) => {
+    setEditingNews(newsItem)
+    setNewsForm({
+      title: newsItem.title,
+      summary: newsItem.summary,
+      content: newsItem.content,
+      category: newsItem.category
+    })
+    setShowNewsForm(true)
+  }
+
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -300,19 +368,10 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                             </div>
                           )}
 
-                          {status === 'reviewed' && canRecommendPaper(paper) && (
-                            <div className="mt-3">
-                              <button
-                                onClick={() => handleRecommendPaper(paper.id)}
-                                className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
-                              >
-                                ⭐ Recommend for Publication
-                              </button>
-                            </div>
-                          )}
 
-                          {status === 'pending' && (
-                            <div className="mt-3 flex space-x-2">
+
+                          <div className="mt-3 flex space-x-2">
+                            {status === 'pending' && (
                               <button
                                 onClick={() => setSelectedPaper(paper)}
                                 className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors text-sm flex items-center"
@@ -320,101 +379,36 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                                 <FileText className="w-4 h-4 mr-1" />
                                 Review
                               </button>
-                              <button
-                                onClick={() => handleEditClick(paper)}
-                                className="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors text-sm flex items-center"
+                            )}
+                            <button
+                              onClick={() => handleEditClick(paper)}
+                              className="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors text-sm flex items-center"
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </button>
+                            {paper.file_url && (
+                              <a
+                                href={paper.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center"
                               >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </button>
-                              {paper.file_url && (
-                                <a
-                                  href={paper.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center"
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  Download
-                                </a>
-                              )}
-                            </div>
-                          )}
+                                <Download className="w-4 h-4 mr-1" />
+                                Download
+                              </a>
+                            )}
+                          </div>
                         </div>
                       )
                     })}
                   </div>
                 )}
-
               </div>
             </div>
           </div>
 
           <div className="space-y-6 sticky top-24">
-
-            {editingPaper && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                    <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
-                    <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <div className="p-6">
-                    <form onSubmit={handleUpdatePaper} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
-                        <input
-                          type="text"
-                          value={editForm.title}
-                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                          className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
-                        <textarea
-                          value={editForm.abstract}
-                          onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
-                          rows={6}
-                          className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) setEditForm({ ...editForm, file })
-                          }}
-                          className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setEditingPaper(null)}
-                          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                        >
-                          Save Changes
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {selectedPaper && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div className="p-6 border-b dark:border-gray-700">
@@ -599,10 +593,256 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                 </form>
               </div>
             </div>
+
+            {/* News Management Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Newspaper className="w-6 h-6 text-red-600" />
+                    <h2 className="text-xl font-semibold text-red-600">News Management</h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditingNews(null)
+                      setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                      setShowNewsForm(true)
+                    }}
+                    className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors flex items-center gap-1 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                {news.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Newspaper className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400">No news posts yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {news.map(item => (
+                      <div key={item.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                        <div className="flex flex-col gap-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span className="text-[10px] px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full font-medium">
+                                {item.category}
+                              </span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${item.status === 'published'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                                }`}>
+                                {item.status === 'published' ? '✓ Posted' : '○ Draft'}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-base text-gray-900 dark:text-white mb-1 line-clamp-1">{item.title}</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{item.summary}</p>
+                          </div>
+                          <div className="flex gap-2 pt-2 border-t dark:border-gray-700">
+                            {item.status !== 'published' && (
+                              <button
+                                onClick={() => handlePublishNews(item.id)}
+                                className="flex-1 text-xs bg-green-600 text-white py-1.5 rounded hover:bg-green-700 transition-colors font-medium"
+                              >
+                                Post
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleEditNewsClick(item)}
+                              className="flex-1 text-xs border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNews(item.id)}
+                              className="flex-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 py-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
+      {/* Modals */}
+      {editingPaper && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
+              <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleUpdatePaper} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
+                  <textarea
+                    value={editForm.abstract}
+                    onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
+                    rows={6}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) setEditForm({ ...editForm, file })
+                    }}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPaper(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* News Form Modal */}
+      {showNewsForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-red-600">
+                {editingNews ? 'Edit News Post' : 'Create News Post'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowNewsForm(false)
+                  setEditingNews(null)
+                  setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newsForm.title}
+                    onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Enter news title"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newsForm.category}
+                    onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    required
+                  >
+                    <option value="Research">Research</option>
+                    <option value="Achievement">Achievement</option>
+                    <option value="Policy">Policy</option>
+                    <option value="Event">Event</option>
+                    <option value="Announcement">Announcement</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Summary <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={newsForm.summary}
+                    onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
+                    rows={3}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Brief summary (will be shown in the news feed)"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Full Content <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={newsForm.content}
+                    onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
+                    rows={8}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Full news content"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewsForm(false)
+                      setEditingNews(null)
+                      setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                    }}
+                    className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                  >
+                    {editingNews ? 'Update News' : 'Create News'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

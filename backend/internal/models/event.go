@@ -10,6 +10,8 @@ type Event struct {
 	ID            uuid.UUID `json:"id" db:"id"`
 	Title         string    `json:"title" db:"title"`
 	Description   string    `json:"description" db:"description"`
+	Category      string    `json:"category" db:"category"`
+	Status        string    `json:"status" db:"status"`
 	Date          time.Time `json:"date" db:"date"`
 	Location      string    `json:"location" db:"location"`
 	CoordinatorID uuid.UUID `json:"coordinator_id" db:"coordinator_id"`
@@ -20,6 +22,7 @@ type Event struct {
 type CreateEventRequest struct {
 	Title       string    `json:"title" binding:"required,max=500"`
 	Description string    `json:"description"`
+	Category    string    `json:"category" binding:"required"`
 	Date        time.Time `json:"date" binding:"required"`
 	Location    string    `json:"location"`
 }
@@ -27,6 +30,7 @@ type CreateEventRequest struct {
 type UpdateEventRequest struct {
 	Title       string    `json:"title" binding:"required,max=500"`
 	Description string    `json:"description"`
+	Category    string    `json:"category"`
 	Date        time.Time `json:"date" binding:"required"`
 	Location    string    `json:"location"`
 }
