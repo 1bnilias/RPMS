@@ -17,6 +17,17 @@ type Paper struct {
 	Type      string    `json:"type" db:"type"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+
+	// Editor Submission Fields
+	InstitutionCode         string    `json:"institution_code" db:"institution_code"`
+	PublicationID           string    `json:"publication_id" db:"publication_id"`
+	PublicationISCEDBand    string    `json:"publication_isced_band" db:"publication_isced_band"`
+	PublicationTitleAmharic string    `json:"publication_title_amharic" db:"publication_title_amharic"`
+	PublicationDate         time.Time `json:"publication_date" db:"publication_date"`
+	PublicationType         string    `json:"publication_type" db:"publication_type"`
+	JournalType             string    `json:"journal_type" db:"journal_type"`
+	JournalName             string    `json:"journal_name" db:"journal_name"`
+	IndigenousKnowledge     bool      `json:"indigenous_knowledge" db:"indigenous_knowledge"`
 }
 
 type CreatePaperRequest struct {
@@ -33,6 +44,17 @@ type UpdatePaperRequest struct {
 	Content  string `json:"content"`
 	FileUrl  string `json:"file_url"`
 	Status   string `json:"status" binding:"oneof=draft submitted under_review approved rejected recommended_for_publication published"`
+
+	// Editor Fields
+	InstitutionCode         string    `json:"institution_code"`
+	PublicationID           string    `json:"publication_id"`
+	PublicationISCEDBand    string    `json:"publication_isced_band"`
+	PublicationTitleAmharic string    `json:"publication_title_amharic"`
+	PublicationDate         time.Time `json:"publication_date"`
+	PublicationType         string    `json:"publication_type"`
+	JournalType             string    `json:"journal_type"`
+	JournalName             string    `json:"journal_name"`
+	IndigenousKnowledge     bool      `json:"indigenous_knowledge"`
 }
 
 type PaperWithAuthor struct {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type Server struct {
@@ -65,16 +66,30 @@ func (s *Server) Register(c *gin.Context) {
 		Preferences:      map[string]interface{}{}, // Default
 		IsVerified:       false,
 		VerificationCode: code,
+		// Author Profile Fields
+		AcademicYear:   req.AcademicYear,
+		AuthorType:     req.AuthorType,
+		AuthorCategory: req.AuthorCategory,
+		AcademicRank:   req.AcademicRank,
+		Qualification:  req.Qualification,
+		EmploymentType: req.EmploymentType,
+		Gender:         req.Gender,
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO users (email, password_hash, name, role, avatar, bio, preferences, is_verified, verification_code)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO users (
+			email, password_hash, name, role, avatar, bio, preferences, is_verified, verification_code,
+			academic_year, author_type, author_category, academic_rank, qualification, employment_type, gender
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, email, name, role, avatar, bio, preferences, is_verified, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences, user.IsVerified, user.VerificationCode).Scan(
+	err = s.db.Pool.QueryRow(ctx, query,
+		user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences, user.IsVerified, user.VerificationCode,
+		user.AcademicYear, user.AuthorType, user.AuthorCategory, user.AcademicRank, user.Qualification, user.EmploymentType, user.Gender,
+	).Scan(
 		&user.ID, &user.Email, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.IsVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -600,6 +615,138 @@ func (s *Server) RecommendPaperForPublication(c *gin.Context) {
 	}()
 
 	c.JSON(http.StatusOK, paper)
+}
+
+func (s *Server) UpdatePaperDetails(c *gin.Context) {
+	paperID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid paper ID"})
+		return
+	}
+
+	var req models.UpdatePaperRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Generate Publication ID if not provided and status is being set to something that implies publication or if it's just missing
+	// For now, we'll generate it if it's empty.
+	if req.PublicationID == "" {
+		req.PublicationID, err = s.generatePublicationID(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate Publication ID"})
+			return
+		}
+	}
+
+	query := `
+		UPDATE papers
+		SET institution_code = $1, publication_id = $2, publication_isced_band = $3,
+			publication_title_amharic = $4, publication_date = $5, publication_type = $6,
+			journal_type = $7, journal_name = $8, indigenous_knowledge = $9,
+			updated_at = NOW()
+		WHERE id = $10
+		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at,
+				  institution_code, publication_id, publication_isced_band, publication_title_amharic,
+				  publication_date, publication_type, journal_type, journal_name, indigenous_knowledge
+	`
+
+	var paper models.Paper
+	err = s.db.Pool.QueryRow(ctx, query,
+		req.InstitutionCode, req.PublicationID, req.PublicationISCEDBand,
+		req.PublicationTitleAmharic, req.PublicationDate, req.PublicationType,
+		req.JournalType, req.JournalName, req.IndigenousKnowledge,
+		paperID,
+	).Scan(
+		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
+		&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
+		&paper.InstitutionCode, &paper.PublicationID, &paper.PublicationISCEDBand,
+		&paper.PublicationTitleAmharic, &paper.PublicationDate, &paper.PublicationType,
+		&paper.JournalType, &paper.JournalName, &paper.IndigenousKnowledge,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update paper details"})
+		return
+	}
+
+	// Notify Admin and Coordinator
+	go func() {
+		// Notify Admins
+		rows, err := s.db.Pool.Query(context.Background(), "SELECT id FROM users WHERE role = 'admin'")
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var adminID uuid.UUID
+				if err := rows.Scan(&adminID); err == nil {
+					message := fmt.Sprintf("Paper details updated for '%s' by Editor", paper.Title)
+					s.db.Pool.Exec(context.Background(),
+						"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+						adminID, message, paper.ID)
+				}
+			}
+		}
+
+		// Notify Coordinators
+		rowsCoord, err := s.db.Pool.Query(context.Background(), "SELECT id FROM users WHERE role = 'coordinator'")
+		if err == nil {
+			defer rowsCoord.Close()
+			for rowsCoord.Next() {
+				var coordID uuid.UUID
+				if err := rowsCoord.Scan(&coordID); err == nil {
+					message := fmt.Sprintf("Paper details updated for '%s' by Editor. Please validate.", paper.Title)
+					s.db.Pool.Exec(context.Background(),
+						"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+						coordID, message, paper.ID)
+				}
+			}
+		}
+	}()
+
+	c.JSON(http.StatusOK, paper)
+}
+
+func (s *Server) generatePublicationID(ctx context.Context) (string, error) {
+	// Format: SMU_P201817001
+	// We need to find the last ID and increment it.
+	// Assuming the format is fixed and numeric part is at the end.
+
+	var lastID string
+	err := s.db.Pool.QueryRow(ctx, "SELECT publication_id FROM papers WHERE publication_id LIKE 'SMU_P%' ORDER BY publication_id DESC LIMIT 1").Scan(&lastID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "SMU_P201817001", nil
+		}
+		// If it's NULL (which it might be for existing papers), we might get here or Scan might fail depending on driver.
+		// pgx Scan returns error if NULL is scanned into string without NullString? No, Scan handles it if we use *string or NullString.
+		// But here we scan into string. If NULL, it errors.
+		// Let's handle it safely.
+		return "SMU_P201817001", nil // Default start if error or no rows
+	}
+
+	if lastID == "" {
+		return "SMU_P201817001", nil
+	}
+
+	// Parse the number
+	// SMU_P201817001 -> 201817001
+	if len(lastID) < 6 {
+		return "SMU_P201817001", nil
+	}
+
+	prefix := "SMU_P"
+	numStr := lastID[len(prefix):]
+	var num int
+	_, err = fmt.Sscanf(numStr, "%d", &num)
+	if err != nil {
+		return "SMU_P201817001", nil // Fallback
+	}
+
+	newNum := num + 1
+	return fmt.Sprintf("%s%d", prefix, newNum), nil
 }
 
 func (s *Server) DeletePaper(c *gin.Context) {

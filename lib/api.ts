@@ -25,6 +25,16 @@ export interface Paper {
     author_name?: string
     author_email?: string
     file_url?: string
+    // Editor Submission Fields
+    institution_code?: string
+    publication_id?: string
+    publication_isced_band?: string
+    publication_title_amharic?: string
+    publication_date?: string
+    publication_type?: string
+    journal_type?: string
+    journal_name?: string
+    indigenous_knowledge?: boolean
 }
 
 export interface Notification {
@@ -226,6 +236,13 @@ export async function updatePaper(id: string, updates: Partial<Paper>) {
     return request<Paper>(`/papers/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
+    })
+}
+
+export async function updatePaperDetails(id: string, details: Partial<Paper>) {
+    return request<Paper>(`/papers/${id}/details`, {
+        method: 'PUT',
+        body: JSON.stringify(details),
     })
 }
 

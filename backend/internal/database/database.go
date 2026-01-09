@@ -186,7 +186,17 @@ func RunMigrations(db *Database) error {
 	// Add status to events
 	addStatusToEvents := `ALTER TABLE events ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft';`
 
-	// Create news table
+	// Add Author Profile columns to users
+	addAuthorProfileColumns := `
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS academic_year VARCHAR(50);
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS author_type VARCHAR(50);
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS author_category VARCHAR(50);
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS academic_rank VARCHAR(50);
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS qualification VARCHAR(50);
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50);
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+	`
+
 	createNewsTable := `
 	CREATE TABLE IF NOT EXISTS news (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -199,6 +209,19 @@ func RunMigrations(db *Database) error {
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 		updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 	);`
+
+	// Add Editor Submission columns to papers
+	addEditorSubmissionColumns := `
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS institution_code VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS publication_id VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS publication_isced_band VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS publication_title_amharic TEXT;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS publication_date TIMESTAMP WITH TIME ZONE;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS publication_type VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS journal_type VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS journal_name VARCHAR(255);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS indigenous_knowledge BOOLEAN DEFAULT FALSE;
+	`
 
 	migrations := []string{
 		createUsersTable,
@@ -220,7 +243,9 @@ func RunMigrations(db *Database) error {
 		addVerificationColumns,
 		addCategoryToEvents,
 		addStatusToEvents,
+		addAuthorProfileColumns,
 		createNewsTable,
+		addEditorSubmissionColumns,
 	}
 
 	for _, migration := range migrations {

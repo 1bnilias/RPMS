@@ -15,6 +15,13 @@ export default function SignupPage() {
         email: '',
         password: '',
         role: 'author', // Default to author
+        academic_year: '',
+        author_type: '',
+        author_category: '',
+        academic_rank: '',
+        qualification: '',
+        employment_type: '',
+        gender: '',
     })
     const [verificationCode, setVerificationCode] = useState('')
     const [error, setError] = useState('')
@@ -141,6 +148,127 @@ export default function SignupPage() {
                                 />
                             </div>
                             {/* Role selection removed, defaulting to Author */}
+
+                            {/* Author Profile Fields */}
+                            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="academic_year" className="block text-sm font-medium text-gray-700">Academic Year</label>
+                                    <select
+                                        id="academic_year"
+                                        name="academic_year"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.academic_year}
+                                        onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })}
+                                    >
+                                        <option value="">Select Year</option>
+                                        <option value="2024-2025">2024-2025</option>
+                                        <option value="2025-2026">2025-2026</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="author_type" className="block text-sm font-medium text-gray-700">Author Type</label>
+                                    <select
+                                        id="author_type"
+                                        name="author_type"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.author_type}
+                                        onChange={(e) => setFormData({ ...formData, author_type: e.target.value })}
+                                    >
+                                        <option value="">Select Type</option>
+                                        <option value="FA">FA</option>
+                                        <option value="COA">COA</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="author_category" className="block text-sm font-medium text-gray-700">Author Category</label>
+                                    <select
+                                        id="author_category"
+                                        name="author_category"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.author_category}
+                                        onChange={(e) => setFormData({ ...formData, author_category: e.target.value })}
+                                    >
+                                        <option value="">Select Category</option>
+                                        <option value="AS">AS</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="academic_rank" className="block text-sm font-medium text-gray-700">Academic Rank</label>
+                                    <select
+                                        id="academic_rank"
+                                        name="academic_rank"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.academic_rank}
+                                        onChange={(e) => setFormData({ ...formData, academic_rank: e.target.value })}
+                                    >
+                                        <option value="">Select Rank</option>
+                                        <option value="GRA-I">GRA-I</option>
+                                        <option value="GRA-II">GRA-II</option>
+                                        <option value="LEC">LEC</option>
+                                        <option value="AST">AST</option>
+                                        <option value="ASC">ASC</option>
+                                        <option value="PRF">PRF</option>
+                                        <option value="AL">AL</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="qualification" className="block text-sm font-medium text-gray-700">Qualification</label>
+                                    <select
+                                        id="qualification"
+                                        name="qualification"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.qualification}
+                                        onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                                    >
+                                        <option value="">Select Qualification</option>
+                                        <option value="MST">MST</option>
+                                        <option value="PHD">PHD</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="employment_type" className="block text-sm font-medium text-gray-700">Employment Type</label>
+                                    <select
+                                        id="employment_type"
+                                        name="employment_type"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.employment_type}
+                                        onChange={(e) => setFormData({ ...formData, employment_type: e.target.value })}
+                                    >
+                                        <option value="">Select Type</option>
+                                        <option value="FT">FT</option>
+                                        <option value="JAEI">JAEI</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label>
+                                    <select
+                                        id="gender"
+                                        name="gender"
+                                        required
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                                        value={formData.gender}
+                                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                    >
+                                        <option value="">Select Gender</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Male">Male</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         {error && (

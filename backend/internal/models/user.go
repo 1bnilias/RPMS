@@ -19,6 +19,15 @@ type User struct {
 	VerificationCode string                 `json:"-" db:"verification_code"`
 	CreatedAt        time.Time              `json:"created_at" db:"created_at"`
 	UpdatedAt        time.Time              `json:"updated_at" db:"updated_at"`
+
+	// Author Profile Fields
+	AcademicYear   string `json:"academic_year" db:"academic_year"`
+	AuthorType     string `json:"author_type" db:"author_type"`
+	AuthorCategory string `json:"author_category" db:"author_category"`
+	AcademicRank   string `json:"academic_rank" db:"academic_rank"`
+	Qualification  string `json:"qualification" db:"qualification"`
+	EmploymentType string `json:"employment_type" db:"employment_type"`
+	Gender         string `json:"gender" db:"gender"`
 }
 
 type CreateUserRequest struct {
@@ -26,6 +35,15 @@ type CreateUserRequest struct {
 	Password string `json:"password" binding:"required,min=6"`
 	Name     string `json:"name" binding:"required"`
 	Role     string `json:"role" binding:"required,oneof=author editor admin coordinator"`
+
+	// Author Profile Fields (Optional for non-authors, but we'll handle validation in handler or bind if needed)
+	AcademicYear   string `json:"academic_year"`
+	AuthorType     string `json:"author_type"`
+	AuthorCategory string `json:"author_category"`
+	AcademicRank   string `json:"academic_rank"`
+	Qualification  string `json:"qualification"`
+	EmploymentType string `json:"employment_type"`
+	Gender         string `json:"gender"`
 }
 
 type LoginRequest struct {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { FileText, Download, Upload, Edit, Clock, X, MessageSquare, Send, Newspaper, Plus } from 'lucide-react'
-import { User, Paper, Review, News, getPapers, getReviews, createReview, updatePaper, uploadFile, recommendPaperForPublication, sendMessage, getAdminUser, createNotification, getNews, createNews, updateNews, deleteNews, publishNews } from '@/lib/api'
+import { User, Paper, Review, News, getPapers, getReviews, createReview, updatePaper, updatePaperDetails, uploadFile, recommendPaperForPublication, sendMessage, getAdminUser, createNotification, getNews, createNews, updateNews, deleteNews, publishNews } from '@/lib/api'
 import Header from './Header'
 
 interface EditorPanelProps {
@@ -21,6 +21,20 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const [adminContactForm, setAdminContactForm] = useState({ paperId: '', message: '' })
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Paper Details Submission State
+  const [detailsPaper, setDetailsPaper] = useState<Paper | null>(null)
+  const [detailsForm, setDetailsForm] = useState({
+    institution_code: '',
+    publication_isced_band: '',
+    publication_title_amharic: '',
+    title: '',
+    publication_date: '',
+    publication_type: '',
+    journal_type: '',
+    journal_name: '',
+    indigenous_knowledge: false
+  })
 
   // News state
   const [news, setNews] = useState<News[]>([])
@@ -47,7 +61,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       if (papersResult.success && papersResult.data) {
         // Filter submitted papers (don't filter out reviewed ones)
         const submittedPapers = papersResult.data.filter((paper: Paper) =>
-          paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication' || paper.status === 'reviewed'
+          paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication'
         )
         setPapers(submittedPapers)
       }
@@ -105,6 +119,47 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const handleEditClick = (paper: Paper) => {
     setEditingPaper(paper)
     setEditForm({ title: paper.title, abstract: paper.abstract || '', file: null })
+  }
+
+  const handleDetailsClick = (paper: Paper) => {
+    setDetailsPaper(paper)
+    setDetailsForm({
+      institution_code: paper.institution_code || '',
+      publication_isced_band: paper.publication_isced_band || '',
+      publication_title_amharic: paper.publication_title_amharic || '',
+      title: paper.title || '',
+      publication_date: paper.publication_date ? new Date(paper.publication_date).toISOString().split('T')[0] : '',
+      publication_type: paper.publication_type || '',
+      journal_type: paper.journal_type || '',
+      journal_name: paper.journal_name || '',
+      indigenous_knowledge: paper.indigenous_knowledge || false
+    })
+  }
+
+  const handleUpdateDetails = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!detailsPaper) return
+
+    try {
+      const updates = {
+        ...detailsForm,
+        title: detailsForm.title,
+        status: detailsPaper.status,
+        publication_date: detailsForm.publication_date ? new Date(detailsForm.publication_date).toISOString() : undefined
+      }
+
+      const result = await updatePaperDetails(detailsPaper.id, updates)
+      if (result.success && result.data) {
+        setPapers(papers.map(p => p.id === detailsPaper.id ? result.data! : p))
+        setDetailsPaper(null)
+        alert('Paper details updated successfully!')
+      } else {
+        alert('Failed to update paper details: ' + (result.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Failed to update paper details:', error)
+      alert('Failed to update paper details')
+    }
   }
 
   const handleUpdatePaper = async (e: React.FormEvent) => {
@@ -347,6 +402,9 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                               {paper.abstract && (
                                 <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 line-clamp-2">{paper.abstract}</p>
                               )}
+                              {paper.publication_id && (
+                                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mt-2">Publication ID: {paper.publication_id}</p>
+                              )}
                             </div>
                             <span className={`px-3 py-1 rounded-full text-sm ${status === 'reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                               }`}>
@@ -386,6 +444,13 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                             >
                               <Edit className="w-4 h-4 mr-1" />
                               Edit
+                            </button>
+                            <button
+                              onClick={() => handleDetailsClick(paper)}
+                              className="bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition-colors text-sm flex items-center"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Edit Details
                             </button>
                             {paper.file_url && (
                               <a
@@ -730,6 +795,159 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                     className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                   >
                     Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paper Details Modal */}
+      {detailsPaper && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-red-600">Publication Details: {detailsPaper.title}</h2>
+              <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution Code</label>
+                  <select
+                    value={detailsForm.institution_code}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  >
+                    <option value="">Select Institution</option>
+                    <option value="SMU">St. Mary's University (SMU)</option>
+                    {/* Add more options as needed */}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication ID</label>
+                  <input
+                    type="text"
+                    value={detailsPaper.publication_id || 'Auto-generated upon save'}
+                    disabled
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ID will be generated automatically if empty.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ISCED Band</label>
+                  <select
+                    value={detailsForm.publication_isced_band}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  >
+                    <option value="">Select Band</option>
+                    <option value="Band 1">Band 1</option>
+                    <option value="Band 2">Band 2</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (English)</label>
+                  <input
+                    type="text"
+                    value={detailsForm.title}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    placeholder="Enter English Title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (Amharic)</label>
+                  <input
+                    type="text"
+                    value={detailsForm.publication_title_amharic}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    placeholder="Enter Amharic Title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Date</label>
+                  <input
+                    type="date"
+                    value={detailsForm.publication_date}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_date: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Type</label>
+                  <select
+                    value={detailsForm.publication_type}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_type: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Journal Article">Journal Article</option>
+                    <option value="Conference Proceeding">Conference Proceeding</option>
+                    <option value="Book Chapter">Book Chapter</option>
+                    <option value="Thesis">Thesis</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Type</label>
+                  <select
+                    value={detailsForm.journal_type}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, journal_type: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  >
+                    <option value="">Select Journal Type</option>
+                    <option value="International">International</option>
+                    <option value="National">National</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Name</label>
+                  <input
+                    type="text"
+                    value={detailsForm.journal_name}
+                    onChange={(e) => setDetailsForm({ ...detailsForm, journal_name: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    placeholder="Enter Journal Name"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={detailsForm.indigenous_knowledge}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
+                      className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Indigenous Knowledge</span>
+                  </label>
+                </div>
+
+                <div className="md:col-span-2 flex justify-end space-x-2 pt-4 border-t dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setDetailsPaper(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Save Details
                   </button>
                 </div>
               </form>

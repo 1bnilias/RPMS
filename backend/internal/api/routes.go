@@ -89,6 +89,7 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 				papers.PUT("/:id", middleware.AuthorOrAdmin(), server.UpdatePaper)
 				papers.DELETE("/:id", middleware.AuthorOrAdmin(), server.DeletePaper)
 				papers.POST("/:id/recommend", middleware.EditorOrAdmin(), server.RecommendPaperForPublication)
+				papers.PUT("/:id/details", middleware.EditorOrCoordinatorOrAdmin(), server.UpdatePaperDetails)
 			}
 
 			// Review routes

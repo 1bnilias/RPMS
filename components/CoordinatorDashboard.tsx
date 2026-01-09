@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar } from 'lucide-react'
-import { User, Event, getEvents, createEvent, updateEvent, deleteEvent, publishEvent } from '@/lib/api'
+import { Calendar, FileText, Edit, X } from 'lucide-react'
+import { User, Event, Paper, getEvents, createEvent, updateEvent, deleteEvent, publishEvent, getPapers, updatePaperDetails } from '@/lib/api'
 import Header from './Header'
 
 interface CoordinatorDashboardProps {
@@ -12,33 +12,61 @@ interface CoordinatorDashboardProps {
 
 export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDashboardProps) {
   const [events, setEvents] = useState<Event[]>([])
+  const [papers, setPapers] = useState<Paper[]>([])
   const [showEventForm, setShowEventForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'Other', date: '', location: '' })
+
+  // Paper Validation State
+  const [detailsPaper, setDetailsPaper] = useState<Paper | null>(null)
+  const [detailsForm, setDetailsForm] = useState({
+    institution_code: '',
+    publication_isced_band: '',
+    publication_title_amharic: '',
+    title: '',
+    publication_date: '',
+    publication_type: '',
+    journal_type: '',
+    journal_name: '',
+    indigenous_knowledge: false
+  })
+
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('All')
 
-  const fetchEvents = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const result = await getEvents()
-      if (result.success && result.data) {
+      const [eventsResult, papersResult] = await Promise.all([
+        getEvents(),
+        getPapers()
+      ])
+
+      if (eventsResult.success && eventsResult.data) {
         // Filter events for current coordinator
-        const coordinatorEvents = result.data.filter((event: Event) =>
+        const coordinatorEvents = eventsResult.data.filter((event: Event) =>
           event.coordinator_id === user.id
         )
         setEvents(coordinatorEvents)
       }
+
+      if (papersResult.success && papersResult.data) {
+        // Coordinator sees papers that are recommended for publication or submitted?
+        // Assuming they see all papers to validate details, or specifically those ready for validation.
+        // Let's show papers that have some details filled or are in 'recommended_for_publication' status.
+        setPapers(papersResult.data)
+      }
+
     } catch (error) {
-      console.error('Failed to fetch events:', error)
+      console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
     }
   }, [user.id])
 
   useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
+    fetchData()
+  }, [fetchData])
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,6 +151,47 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       }
     } catch (error) {
       console.error('Failed to publish event:', error)
+    }
+  }
+
+  const handleDetailsClick = (paper: Paper) => {
+    setDetailsPaper(paper)
+    setDetailsForm({
+      institution_code: paper.institution_code || '',
+      publication_isced_band: paper.publication_isced_band || '',
+      publication_title_amharic: paper.publication_title_amharic || '',
+      title: paper.title || '',
+      publication_date: paper.publication_date ? new Date(paper.publication_date).toISOString().split('T')[0] : '',
+      publication_type: paper.publication_type || '',
+      journal_type: paper.journal_type || '',
+      journal_name: paper.journal_name || '',
+      indigenous_knowledge: paper.indigenous_knowledge || false
+    })
+  }
+
+  const handleUpdateDetails = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!detailsPaper) return
+
+    try {
+      const updates = {
+        ...detailsForm,
+        title: detailsForm.title,
+        status: detailsPaper.status,
+        publication_date: detailsForm.publication_date ? new Date(detailsForm.publication_date).toISOString() : undefined
+      }
+
+      const result = await updatePaperDetails(detailsPaper.id, updates)
+      if (result.success && result.data) {
+        setPapers(papers.map(p => p.id === detailsPaper.id ? result.data! : p))
+        setDetailsPaper(null)
+        alert('Paper details validated/updated successfully!')
+      } else {
+        alert('Failed to update paper details: ' + (result.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Failed to update paper details:', error)
+      alert('Failed to update paper details')
     }
   }
 
@@ -332,6 +401,208 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
         </div>
 
+
+
+        {/* Papers Validation Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-6 border-b dark:border-gray-700">
+            <h2 className="text-xl font-semibold text-red-600">Papers to Validate</h2>
+          </div>
+          <div className="p-6">
+            {papers.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">No papers assigned for validation</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {papers.map(paper => (
+                  <div key={paper.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-semibold dark:text-white">{paper.title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
+                        <div className="flex gap-2 mt-2">
+                          <span className={`text-xs px-2 py-1 rounded-full ${paper.publication_id ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {paper.publication_id ? 'Details Added' : 'Pending Details'}
+                          </span>
+                          <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                            {paper.status.replace(/_/g, ' ')}
+                          </span>
+                          {paper.publication_id && (
+                            <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">
+                              ID: {paper.publication_id}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDetailsClick(paper)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Validate Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Paper Details Modal */}
+        {detailsPaper && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
+                <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution Code</label>
+                    <select
+                      value={detailsForm.institution_code}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="">Select Institution</option>
+                      <option value="SMU">St. Mary's University (SMU)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication ID</label>
+                    <input
+                      type="text"
+                      value={detailsPaper.publication_id || 'Auto-generated upon save'}
+                      disabled
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ISCED Band</label>
+                    <select
+                      value={detailsForm.publication_isced_band}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="">Select Band</option>
+                      <option value="Band 1">Band 1</option>
+                      <option value="Band 2">Band 2</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (English)</label>
+                    <input
+                      type="text"
+                      value={detailsForm.title}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter English Title"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (Amharic)</label>
+                    <input
+                      type="text"
+                      value={detailsForm.publication_title_amharic}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter Amharic Title"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Date</label>
+                    <input
+                      type="date"
+                      value={detailsForm.publication_date}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_date: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Type</label>
+                    <select
+                      value={detailsForm.publication_type}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_type: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="Journal Article">Journal Article</option>
+                      <option value="Conference Proceeding">Conference Proceeding</option>
+                      <option value="Book Chapter">Book Chapter</option>
+                      <option value="Thesis">Thesis</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Type</label>
+                    <select
+                      value={detailsForm.journal_type}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, journal_type: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="">Select Journal Type</option>
+                      <option value="International">International</option>
+                      <option value="National">National</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Name</label>
+                    <input
+                      type="text"
+                      value={detailsForm.journal_name}
+                      onChange={(e) => setDetailsForm({ ...detailsForm, journal_name: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter Journal Name"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={detailsForm.indigenous_knowledge}
+                        onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
+                        className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Indigenous Knowledge</span>
+                    </label>
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end space-x-2 pt-4 border-t dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setDetailsPaper(null)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                      Save & Validate
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showEventForm && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6 border-b dark:border-gray-700">
@@ -431,6 +702,6 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
         )}
       </div>
-    </div>
+    </div >
   )
 }
