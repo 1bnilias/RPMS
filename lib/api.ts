@@ -8,6 +8,7 @@ export interface User {
     avatar?: string
     bio?: string
     preferences?: Record<string, any>
+    date_of_birth?: string
     created_at: string
     updated_at: string
 }
@@ -24,6 +25,16 @@ export interface Paper {
     updated_at: string
     author_name?: string
     author_email?: string
+    author_academic_year?: string
+    author_author_type?: string
+    author_author_category?: string
+    author_academic_rank?: string
+    author_qualification?: string
+    author_employment_type?: string
+    author_gender?: string
+    author_date_of_birth?: string
+    author_bio?: string
+    author_avatar?: string
     file_url?: string
     // Editor Submission Fields
     institution_code?: string

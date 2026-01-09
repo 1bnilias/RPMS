@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { User, Contact, Message, getContacts, getMessages, sendMessage, uploadChatFile } from '@/lib/api'
 import { Send, Search, MessageSquare, Paperclip, X, Reply, Forward } from 'lucide-react'
 import MessageAttachment from './MessageAttachment'
@@ -25,6 +26,10 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
     const messageInputRef = useRef<HTMLInputElement>(null)
     const prevMessagesLengthRef = useRef(0)
 
+    const searchParams = useSearchParams()
+    const initialUserId = searchParams.get('userId')
+    const initialMessage = searchParams.get('message')
+
     // Attachment state
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
@@ -44,6 +49,19 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
         const interval = setInterval(fetchContacts, 10000)
         return () => clearInterval(interval)
     }, [])
+
+    // Handle initial contact selection and message from query params
+    useEffect(() => {
+        if (contacts.length > 0 && initialUserId) {
+            const contact = contacts.find(c => c.id === initialUserId)
+            if (contact) {
+                setSelectedContact(contact)
+                if (initialMessage) {
+                    setNewMessage(decodeURIComponent(initialMessage))
+                }
+            }
+        }
+    }, [contacts, initialUserId, initialMessage])
 
     // Fetch messages when contact is selected
     useEffect(() => {

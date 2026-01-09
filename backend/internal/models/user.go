@@ -28,6 +28,7 @@ type User struct {
 	Qualification  string `json:"qualification" db:"qualification"`
 	EmploymentType string `json:"employment_type" db:"employment_type"`
 	Gender         string `json:"gender" db:"gender"`
+	DateOfBirth    string `json:"date_of_birth" db:"date_of_birth"`
 }
 
 type CreateUserRequest struct {
@@ -44,6 +45,7 @@ type CreateUserRequest struct {
 	Qualification  string `json:"qualification"`
 	EmploymentType string `json:"employment_type"`
 	Gender         string `json:"gender"`
+	DateOfBirth    string `json:"date_of_birth"`
 }
 
 type LoginRequest struct {

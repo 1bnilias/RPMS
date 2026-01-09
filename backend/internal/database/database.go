@@ -66,7 +66,7 @@ func RunMigrations(db *Database) error {
 		abstract TEXT,
 		content TEXT,
 		author_id UUID REFERENCES users(id) ON DELETE CASCADE,
-		status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'under_review', 'approved', 'rejected', 'published')),
+		status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'under_review', 'approved', 'rejected', 'published', 'recommended_for_publication')),
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 		updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 	);`
@@ -223,6 +223,27 @@ func RunMigrations(db *Database) error {
 		ALTER TABLE papers ADD COLUMN IF NOT EXISTS indigenous_knowledge BOOLEAN DEFAULT FALSE;
 	`
 
+	// Update paper status check constraint
+	updatePaperStatusConstraint := `
+		DO $$
+		BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name = 'papers' AND constraint_name = 'papers_status_check') THEN
+				ALTER TABLE papers DROP CONSTRAINT papers_status_check;
+			END IF;
+			ALTER TABLE papers ADD CONSTRAINT papers_status_check CHECK (status IN ('draft', 'submitted', 'under_review', 'approved', 'rejected', 'published', 'recommended_for_publication'));
+		END $$;
+	`
+
+	// Add date_of_birth to users
+	addDateOfBirthToUsers := `
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'date_of_birth') THEN
+				ALTER TABLE users ADD COLUMN date_of_birth TEXT DEFAULT '';
+			END IF;
+		END $$;
+	`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -246,6 +267,8 @@ func RunMigrations(db *Database) error {
 		addAuthorProfileColumns,
 		createNewsTable,
 		addEditorSubmissionColumns,
+		updatePaperStatusConstraint,
+		addDateOfBirthToUsers,
 	}
 
 	for _, migration := range migrations {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, FileText, Edit, X, Newspaper, Plus } from 'lucide-react'
+import { Calendar, FileText, Edit, X, Newspaper, Plus, CheckCircle, Clock, AlertCircle, TrendingUp } from 'lucide-react'
 import { User, Event, Paper, News, getEvents, createEvent, updateEvent, deleteEvent, publishEvent, getPapers, updatePaperDetails, getNews, createNews, updateNews, deleteNews, publishNews } from '@/lib/api'
 import Header from './Header'
 
@@ -17,20 +17,6 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'Other', date: '', location: '' })
 
-  // Paper Validation State
-  const [detailsPaper, setDetailsPaper] = useState<Paper | null>(null)
-  const [detailsForm, setDetailsForm] = useState({
-    institution_code: '',
-    publication_isced_band: '',
-    publication_title_amharic: '',
-    title: '',
-    publication_date: '',
-    publication_type: '',
-    journal_type: '',
-    journal_name: '',
-    indigenous_knowledge: false
-  })
-
   // News state
   const [news, setNews] = useState<News[]>([])
   const [showNewsForm, setShowNewsForm] = useState(false)
@@ -41,6 +27,9 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
     content: '',
     category: 'Research'
   })
+
+  const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
+  const [showAuthorModal, setShowAuthorModal] = useState(false)
 
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -55,7 +44,6 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       ])
 
       if (eventsResult.success && eventsResult.data) {
-        // Filter events for current coordinator
         const coordinatorEvents = eventsResult.data.filter((event: Event) =>
           event.coordinator_id === user.id
         )
@@ -63,9 +51,6 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       }
 
       if (papersResult.success && papersResult.data) {
-        // Coordinator sees papers that are recommended for publication or submitted?
-        // Assuming they see all papers to validate details, or specifically those ready for validation.
-        // Let's show papers that have some details filled or are in 'recommended_for_publication' status.
         setPapers(papersResult.data)
       }
 
@@ -83,6 +68,30 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Handle hash navigation for deep linking
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash
+      if (hash && hash.startsWith('#paper-')) {
+        const paperId = hash.replace('#paper-', '')
+        const element = document.getElementById(`paper-${paperId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element.classList.add('ring-2', 'ring-red-500')
+          setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+        }
+      }
+    }
+
+    // Check on mount and when papers load
+    if (!loading && papers.length > 0) {
+      handleHashChange()
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [loading, papers])
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,6 +148,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           ))
           setEditingEvent(null)
           setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '' })
+          setShowEventForm(false)
         }
       } catch (error) {
         console.error('Failed to update event:', error)
@@ -147,6 +157,8 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   }
 
   const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event?')) return
+
     try {
       const result = await deleteEvent(eventId)
       if (result.success) {
@@ -170,50 +182,29 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
     }
   }
 
-  const handleDetailsClick = (paper: Paper) => {
-    setDetailsPaper(paper)
-    setDetailsForm({
-      institution_code: paper.institution_code || '',
-      publication_isced_band: paper.publication_isced_band || '',
-      publication_title_amharic: paper.publication_title_amharic || '',
-      title: paper.title || '',
-      publication_date: paper.publication_date ? new Date(paper.publication_date).toISOString().split('T')[0] : '',
-      publication_type: paper.publication_type || '',
-      journal_type: paper.journal_type || '',
-      journal_name: paper.journal_name || '',
-      indigenous_knowledge: paper.indigenous_knowledge || false
-    })
-  }
-
-  const handleUpdateDetails = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!detailsPaper) return
-
-    try {
-      const updates = {
-        ...detailsForm,
-        title: detailsForm.title,
-        status: detailsPaper.status,
-        publication_date: detailsForm.publication_date ? new Date(detailsForm.publication_date).toISOString() : undefined
-      }
-
-      const result = await updatePaperDetails(detailsPaper.id, updates)
-      if (result.success && result.data) {
-        setPapers(papers.map(p => p.id === detailsPaper.id ? result.data! : p))
-        setDetailsPaper(null)
-        alert('Paper details validated/updated successfully!')
-      } else {
-        alert('Failed to update paper details: ' + (result.error || 'Unknown error'))
-      }
-    } catch (error) {
-      console.error('Failed to update paper details:', error)
-      alert('Failed to update paper details')
+  const handleCreateFromPaper = (paper: Paper, type: 'event' | 'news') => {
+    if (type === 'event') {
+      setNewEvent({
+        title: paper.title,
+        description: paper.abstract || '',
+        category: 'Conference',
+        date: '',
+        location: ''
+      })
+      setShowEventForm(true)
+    } else {
+      setNewsForm({
+        title: paper.title,
+        summary: paper.abstract ? paper.abstract.substring(0, 150) + '...' : '',
+        content: paper.abstract || '',
+        category: 'Research'
+      })
+      setShowNewsForm(true)
     }
   }
 
   const startEditEvent = (event: Event) => {
     setEditingEvent(event)
-    // Format date for datetime-local input (YYYY-MM-DDThh:mm)
     const dateStr = new Date(event.date).toISOString().slice(0, 16)
 
     setNewEvent({
@@ -375,22 +366,45 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 pb-0">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Total Events</h3>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{events.length}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pb-0">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-blue-600 dark:text-blue-300 mb-1">Total Events</p>
+                  <h3 className="text-3xl font-bold text-blue-900 dark:text-blue-100">{events.length}</h3>
+                </div>
+                <div className="p-2 bg-blue-200 dark:bg-blue-800/50 rounded-lg">
+                  <Calendar className="w-6 h-6 text-blue-700 dark:text-blue-300" />
+                </div>
+              </div>
             </div>
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
-              <h3 className="text-sm font-medium text-green-800 dark:text-green-300">Upcoming</h3>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                {events.filter(e => new Date(e.date) > new Date()).length}
-              </p>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-6 rounded-xl border border-green-200 dark:border-green-800 shadow-sm">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-300 mb-1">Upcoming</p>
+                  <h3 className="text-3xl font-bold text-green-900 dark:text-green-100">
+                    {events.filter(e => new Date(e.date) > new Date()).length}
+                  </h3>
+                </div>
+                <div className="p-2 bg-green-200 dark:bg-green-800/50 rounded-lg">
+                  <TrendingUp className="w-6 h-6 text-green-700 dark:text-green-300" />
+                </div>
+              </div>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-              <h3 className="text-sm font-medium text-gray-800 dark:text-gray-300">Past</h3>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {events.filter(e => new Date(e.date) <= new Date()).length}
-              </p>
+
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Past Events</p>
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    {events.filter(e => new Date(e.date) <= new Date()).length}
+                  </h3>
+                </div>
+                <div className="p-2 bg-gray-200 dark:bg-gray-600 rounded-lg">
+                  <Clock className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+                </div>
+              </div>
             </div>
           </div>
           <div className="p-6">
@@ -406,7 +420,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {events
                   .filter(event => {
                     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -416,62 +430,63 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                   .map(event => {
                     const status = getEventStatus(event.date)
                     return (
-                      <div key={event.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-semibold text-lg dark:text-white">{event.title}</h3>
-                            <div className="flex gap-2 mt-1">
-                              <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full inline-block">
+                      <div key={event.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all duration-200 flex flex-col h-full">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1 min-w-0 mr-2">
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{event.title}</h3>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              <span className="text-[10px] font-semibold tracking-wide uppercase text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-md">
                                 {event.category || 'Other'}
                               </span>
-                              <span className={`text-xs font-medium px-2 py-1 rounded-full inline-block ${event.status === 'published'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                              <span className={`text-[10px] font-semibold tracking-wide uppercase px-2 py-1 rounded-md ${event.status === 'published'
+                                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
                                 }`}>
-                                {event.status === 'published' ? 'Posted' : 'Draft'}
+                                {event.status === 'published' ? 'Published' : 'Draft'}
                               </span>
                             </div>
                           </div>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(status)}`}>
-                            {status}
+                          <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
                           </span>
                         </div>
 
-                        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mb-3">
-                          <p className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-2" />
+                        <div className="space-y-3 mb-4 flex-grow">
+                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <Calendar className="w-4 h-4 mr-2.5 text-gray-400" />
                             {formatDate(event.date)}
-                          </p>
+                          </div>
                           {event.location && (
-                            <p className="flex items-center">
-                              <span className="w-4 h-4 mr-2">📍</span>
-                              {event.location}
+                            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                              <span className="w-4 h-4 mr-2.5 flex items-center justify-center text-gray-400">📍</span>
+                              <span className="truncate">{event.location}</span>
+                            </div>
+                          )}
+                          {event.description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-2 leading-relaxed">
+                              {event.description}
                             </p>
                           )}
                         </div>
 
-                        {event.description && (
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-3">{event.description}</p>
-                        )}
-
-                        <div className="flex space-x-2">
+                        <div className="flex items-center gap-2 pt-4 border-t dark:border-gray-700 mt-auto">
                           {event.status !== 'published' && (
                             <button
                               onClick={() => handlePublishEvent(event.id)}
-                              className="text-sm bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors"
+                              className="flex-1 text-xs font-medium bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
                             >
-                              Post
+                              Publish
                             </button>
                           )}
                           <button
                             onClick={() => startEditEvent(event)}
-                            className="text-sm border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
+                            className="flex-1 text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteEvent(event.id)}
-                            className="text-sm border border-red-300 text-red-600 px-3 py-1 rounded-md hover:bg-red-50 transition-colors"
+                            className="flex-1 text-xs font-medium border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                           >
                             Delete
                           </button>
@@ -484,32 +499,118 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
         </div>
 
+        {/* News Management Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-6 border-b dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h2 className="text-xl font-semibold text-red-600">News & Updates</h2>
+            <button
+              onClick={() => setShowNewsForm(true)}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors whitespace-nowrap"
+            >
+              Post News
+            </button>
+          </div>
+          <div className="p-6">
+            {news.length === 0 ? (
+              <div className="text-center py-8">
+                <Newspaper className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">No news posted yet</p>
+                <button
+                  onClick={() => setShowNewsForm(true)}
+                  className="mt-4 text-red-600 hover:text-red-700 font-medium"
+                >
+                  Create your first news post
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {news.map(item => (
+                  <div key={item.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all duration-200 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{item.title}</h3>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-[10px] font-semibold tracking-wide uppercase text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-md">
+                            {item.category || 'General'}
+                          </span>
+                          <span className={`text-[10px] font-semibold tracking-wide uppercase px-2 py-1 rounded-md ${item.status === 'published'
+                            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            }`}>
+                            {item.status === 'published' ? 'Published' : 'Draft'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
 
+                    <div className="space-y-3 mb-4 flex-grow">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mt-2 leading-relaxed">
+                        {item.summary}
+                      </p>
+                    </div>
 
-        {/* Papers Validation Section */}
+                    <div className="flex items-center gap-2 pt-4 border-t dark:border-gray-700 mt-auto">
+                      {item.status !== 'published' && (
+                        <button
+                          onClick={() => handlePublishNews(item.id)}
+                          className="flex-1 text-xs font-medium bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                        >
+                          Publish
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleEditNewsClick(item)}
+                        className="flex-1 text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNews(item.id)}
+                        className="flex-1 text-xs font-medium border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Papers Section - Create News/Event from Paper */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-6 border-b dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-red-600">Papers to Validate</h2>
+            <h2 className="text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
+            <p className="text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
           </div>
           <div className="p-6">
             {papers.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">No papers assigned for validation</p>
+                <p className="text-gray-600 dark:text-gray-400">No papers available</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {papers.map(paper => (
-                  <div key={paper.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
+                  <div key={paper.id} id={`paper-${paper.id}`} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                       <div>
-                        <h3 className="font-semibold dark:text-white">{paper.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
+                        <h3 className="font-semibold dark:text-white text-lg">{paper.title}</h3>
+                        <button
+                          onClick={() => {
+                            setSelectedAuthor(paper)
+                            setShowAuthorModal(true)
+                          }}
+                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 hover:underline transition-colors text-left"
+                        >
+                          Author: {paper.author_name || 'Unknown'}
+                        </button>
                         <div className="flex gap-2 mt-2">
-                          <span className={`text-xs px-2 py-1 rounded-full ${paper.publication_id ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {paper.publication_id ? 'Details Added' : 'Pending Details'}
-                          </span>
                           <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
                             {paper.status.replace(/_/g, ' ')}
                           </span>
@@ -520,13 +621,22 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDetailsClick(paper)}
-                        className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center"
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Validate Details
-                      </button>
+                      <div className="flex gap-2 w-full md:w-auto">
+                        <button
+                          onClick={() => handleCreateFromPaper(paper, 'event')}
+                          className="flex-1 md:flex-none bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center justify-center"
+                        >
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Create Event
+                        </button>
+                        <button
+                          onClick={() => handleCreateFromPaper(paper, 'news')}
+                          className="flex-1 md:flex-none bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm flex items-center justify-center"
+                        >
+                          <Newspaper className="w-4 h-4 mr-2" />
+                          Post News
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -535,149 +645,103 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
         </div>
 
-        {/* Paper Details Modal */}
-        {detailsPaper && (
+        {/* Event Modal */}
+        {showEventForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
-                <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
+                <h2 className="text-xl font-semibold text-red-600">
+                  {editingEvent ? 'Edit Event' : 'Create New Event'}
+                </h2>
+                <button onClick={cancelForm} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                   <X className="w-6 h-6" />
                 </button>
               </div>
               <div className="p-6">
-                <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution Code</label>
-                    <select
-                      value={detailsForm.institution_code}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    >
-                      <option value="">Select Institution</option>
-                      <option value="SMU">St. Mary's University (SMU)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication ID</label>
-                    <input
-                      type="text"
-                      value={detailsPaper.publication_id || 'Auto-generated upon save'}
-                      disabled
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ISCED Band</label>
-                    <select
-                      value={detailsForm.publication_isced_band}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    >
-                      <option value="">Select Band</option>
-                      <option value="Band 1">Band 1</option>
-                      <option value="Band 2">Band 2</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (English)</label>
-                    <input
-                      type="text"
-                      value={detailsForm.title}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      placeholder="Enter English Title"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (Amharic)</label>
-                    <input
-                      type="text"
-                      value={detailsForm.publication_title_amharic}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      placeholder="Enter Amharic Title"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Date</label>
-                    <input
-                      type="date"
-                      value={detailsForm.publication_date}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_date: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Type</label>
-                    <select
-                      value={detailsForm.publication_type}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, publication_type: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    >
-                      <option value="">Select Type</option>
-                      <option value="Journal Article">Journal Article</option>
-                      <option value="Conference Proceeding">Conference Proceeding</option>
-                      <option value="Book Chapter">Book Chapter</option>
-                      <option value="Thesis">Thesis</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Type</label>
-                    <select
-                      value={detailsForm.journal_type}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, journal_type: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    >
-                      <option value="">Select Journal Type</option>
-                      <option value="International">International</option>
-                      <option value="National">National</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Name</label>
-                    <input
-                      type="text"
-                      value={detailsForm.journal_name}
-                      onChange={(e) => setDetailsForm({ ...detailsForm, journal_name: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      placeholder="Enter Journal Name"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={detailsForm.indigenous_knowledge}
-                        onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
-                        className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Indigenous Knowledge</span>
+                    <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Event Title
                     </label>
+                    <input
+                      id="eventTitle"
+                      type="text"
+                      value={newEvent.title}
+                      onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                      placeholder="Enter event title"
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                    />
                   </div>
-
-                  <div className="md:col-span-2 flex justify-end space-x-2 pt-4 border-t dark:border-gray-700">
+                  <div>
+                    <label htmlFor="eventCategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category
+                    </label>
+                    <select
+                      id="eventCategory"
+                      value={newEvent.category}
+                      onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="Conference">Conference</option>
+                      <option value="Workshop">Workshop</option>
+                      <option value="Seminar">Seminar</option>
+                      <option value="Thesis Defense">Thesis Defense</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Date & Time
+                    </label>
+                    <input
+                      id="eventDate"
+                      type="datetime-local"
+                      value={newEvent.date}
+                      onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="eventLocation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Location
+                    </label>
+                    <input
+                      id="eventLocation"
+                      type="text"
+                      value={newEvent.location}
+                      onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                      placeholder="Enter event location"
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="eventDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      id="eventDescription"
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                      placeholder="Enter event description"
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2 pt-4">
                     <button
                       type="button"
-                      onClick={() => setDetailsPaper(null)}
+                      onClick={cancelForm}
                       className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
                     >
-                      Save & Validate
+                      {editingEvent ? 'Update Event' : 'Create Event'}
                     </button>
                   </div>
                 </form>
@@ -686,182 +750,103 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
         )}
 
-        {showEventForm && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-            <div className="p-6 border-b dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-red-600">
-                {editingEvent ? 'Edit Event' : 'Create New Event'}
-              </h2>
-            </div>
-            <div className="p-6">
-              <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
-                <div>
-                  <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Event Title
-                  </label>
-                  <input
-                    id="eventTitle"
-                    type="text"
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="Enter event title"
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="eventCategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Category
-                  </label>
-                  <select
-                    id="eventCategory"
-                    value={newEvent.category}
-                    onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="Conference">Conference</option>
-                    <option value="Workshop">Workshop</option>
-                    <option value="Seminar">Seminar</option>
-                    <option value="Thesis Defense">Thesis Defense</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Date & Time
-                  </label>
-                  <input
-                    id="eventDate"
-                    type="datetime-local"
-                    value={newEvent.date}
-                    onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="eventLocation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Location
-                  </label>
-                  <input
-                    id="eventLocation"
-                    type="text"
-                    value={newEvent.location}
-                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                    placeholder="Enter event location"
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="eventDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    id="eventDescription"
-                    value={newEvent.description}
-                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                    placeholder="Enter event description"
-                    rows={4}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    type="submit"
-                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                  >
-                    {editingEvent ? 'Update Event' : 'Create Event'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelForm}
-                    className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+        {/* News Modal */}
+        {showNewsForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600">
+                  {editingNews ? 'Edit News Post' : 'Create News Post'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowNewsForm(false)
+                    setEditingNews(null)
+                    setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newsForm.title}
+                      onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={newsForm.category}
+                      onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="Research">Research</option>
+                      <option value="Academic">Academic</option>
+                      <option value="Event">Event</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Summary
+                    </label>
+                    <textarea
+                      value={newsForm.summary}
+                      onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
+                      rows={3}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Content
+                    </label>
+                    <textarea
+                      value={newsForm.content}
+                      onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
+                      rows={6}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      required
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewsForm(false)
+                        setEditingNews(null)
+                        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      {editingNews ? 'Update News' : 'Create News'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-      </div>
         )}
-
-      {showNewsForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-red-600">
-                {editingNews ? 'Edit News' : 'Create News'}
-              </h2>
-              <button onClick={() => setShowNewsForm(false)} className="text-gray-500 hover:text-gray-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
-                  <input
-                    type="text"
-                    value={newsForm.title}
-                    onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
-                  <select
-                    value={newsForm.category}
-                    onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  >
-                    <option value="Research">Research</option>
-                    <option value="Event">Event</option>
-                    <option value="Announcement">Announcement</option>
-                    <option value="Award">Award</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Summary</label>
-                  <textarea
-                    value={newsForm.summary}
-                    onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
-                    rows={2}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content</label>
-                  <textarea
-                    value={newsForm.content}
-                    onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
-                    rows={6}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    required
-                  />
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewsForm(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
-                    {editingNews ? 'Update News' : 'Create News'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   )
 }

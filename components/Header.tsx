@@ -73,16 +73,16 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
             fetchNotifications()
         }
 
-        // Navigate to home page (which shows role-specific dashboard)
+        // Navigate to dashboard page
         if (notification.paper_id) {
             setShowNotifications(false)
 
-            // If we are already on the home page, manually set the hash to trigger scrolling
-            if (window.location.pathname === '/') {
+            // If we are already on the dashboard page, manually set the hash to trigger scrolling
+            if (window.location.pathname === '/dashboard') {
                 window.location.hash = `paper-${notification.paper_id}`
             } else {
-                // Otherwise navigate to the page with the hash
-                router.push(`/#paper-${notification.paper_id}`)
+                // Otherwise navigate to the dashboard page with the hash
+                router.push(`/dashboard#paper-${notification.paper_id}`)
             }
         }
     }

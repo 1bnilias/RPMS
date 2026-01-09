@@ -74,21 +74,22 @@ func (s *Server) Register(c *gin.Context) {
 		Qualification:  req.Qualification,
 		EmploymentType: req.EmploymentType,
 		Gender:         req.Gender,
+		DateOfBirth:    req.DateOfBirth,
 	}
 
 	ctx := c.Request.Context()
 	query := `
 		INSERT INTO users (
 			email, password_hash, name, role, avatar, bio, preferences, is_verified, verification_code,
-			academic_year, author_type, author_category, academic_rank, qualification, employment_type, gender
+			academic_year, author_type, author_category, academic_rank, qualification, employment_type, gender, date_of_birth
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING id, email, name, role, avatar, bio, preferences, is_verified, created_at, updated_at
 	`
 
 	err = s.db.Pool.QueryRow(ctx, query,
 		user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences, user.IsVerified, user.VerificationCode,
-		user.AcademicYear, user.AuthorType, user.AuthorCategory, user.AcademicRank, user.Qualification, user.EmploymentType, user.Gender,
+		user.AcademicYear, user.AuthorType, user.AuthorCategory, user.AcademicRank, user.Qualification, user.EmploymentType, user.Gender, user.DateOfBirth,
 	).Scan(
 		&user.ID, &user.Email, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.IsVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
@@ -355,7 +356,7 @@ func (s *Server) GetNotifications(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	query := `
-		SELECT id, user_id, message, is_read, created_at, paper_id
+		SELECT id, user_id, message, is_read, created_at, COALESCE(paper_id, '')
 		FROM notifications
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -407,10 +408,14 @@ func (s *Server) GetPapers(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	query := `
-		SELECT p.id, p.title, p.abstract, p.content, p.file_url, p.author_id, p.status, p.created_at, p.updated_at,
-			   p.institution_code, p.publication_id, p.publication_isced_band, p.publication_title_amharic,
-			   p.publication_date, p.publication_type, p.journal_type, p.journal_name, p.indigenous_knowledge,
-			   u.name as author_name, u.email as author_email
+		SELECT p.id, p.title, COALESCE(p.abstract, ''), COALESCE(p.content, ''), COALESCE(p.file_url, ''), p.author_id, p.status, COALESCE(p.type, 'Research Paper'), p.created_at, p.updated_at,
+			   COALESCE(p.institution_code, ''), COALESCE(p.publication_id, ''), COALESCE(p.publication_isced_band, ''), COALESCE(p.publication_title_amharic, ''),
+			   p.publication_date, COALESCE(p.publication_type, ''), COALESCE(p.journal_type, ''), COALESCE(p.journal_name, ''), COALESCE(p.indigenous_knowledge, false),
+			   COALESCE(u.name, 'Unknown'), COALESCE(u.email, ''), COALESCE(u.academic_year, ''),
+			   COALESCE(u.author_type, ''), COALESCE(u.author_category, ''),
+			   COALESCE(u.academic_rank, ''), COALESCE(u.qualification, ''),
+			   COALESCE(u.employment_type, ''), COALESCE(u.gender, ''), COALESCE(u.date_of_birth, ''),
+			   COALESCE(u.bio, ''), COALESCE(u.avatar, '')
 		FROM papers p
 		LEFT JOIN users u ON p.author_id = u.id
 		ORDER BY p.created_at DESC
@@ -428,12 +433,15 @@ func (s *Server) GetPapers(c *gin.Context) {
 		var paper models.PaperWithAuthor
 		err := rows.Scan(
 			&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
-			&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
+			&paper.Status, &paper.Type, &paper.CreatedAt, &paper.UpdatedAt,
 			&paper.InstitutionCode, &paper.PublicationID, &paper.PublicationISCEDBand, &paper.PublicationTitleAmharic,
 			&paper.PublicationDate, &paper.PublicationType, &paper.JournalType, &paper.JournalName, &paper.IndigenousKnowledge,
-			&paper.AuthorName, &paper.AuthorEmail,
+			&paper.AuthorName, &paper.AuthorEmail, &paper.AuthorAcademicYear,
+			&paper.AuthorType, &paper.AuthorCategory, &paper.AuthorAcademicRank, &paper.AuthorQualification,
+			&paper.AuthorEmploymentType, &paper.AuthorGender, &paper.AuthorDateOfBirth, &paper.AuthorBio, &paper.AuthorAvatar,
 		)
 		if err != nil {
+			fmt.Printf("[GetPapers] Scan error: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan paper"})
 			return
 		}
@@ -458,29 +466,46 @@ func (s *Server) CreatePaper(c *gin.Context) {
 	}
 
 	paper := models.Paper{
-		Title:    req.Title,
-		Abstract: req.Abstract,
-		Content:  req.Content,
-		FileUrl:  req.FileUrl,
-		AuthorID: authorID,
-		Status:   "submitted",
-		Type:     req.Type,
+		Title:                   req.Title,
+		Abstract:                req.Abstract,
+		Content:                 req.Content,
+		FileUrl:                 req.FileUrl,
+		AuthorID:                authorID,
+		Status:                  "submitted",
+		Type:                    req.Type,
+		PublicationTitleAmharic: req.PublicationTitleAmharic,
+		PublicationISCEDBand:    req.PublicationISCEDBand,
+		PublicationType:         req.PublicationType,
+		JournalType:             req.JournalType,
+		JournalName:             req.JournalName,
 	}
 
 	if paper.Type == "" {
-		paper.Type = "research" // Default
+		paper.Type = "Research Paper" // Default
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO papers (title, abstract, content, file_url, author_id, status, type)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, title, abstract, content, file_url, author_id, status, type, created_at, updated_at
+		INSERT INTO papers (
+			title, abstract, content, file_url, author_id, status, type,
+			publication_title_amharic, publication_isced_band, publication_type,
+			journal_type, journal_name
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		RETURNING id, title, COALESCE(abstract, ''), COALESCE(content, ''), COALESCE(file_url, ''), author_id, status, type, created_at, updated_at,
+				  COALESCE(publication_title_amharic, ''), COALESCE(publication_isced_band, ''), COALESCE(publication_type, ''),
+				  COALESCE(journal_type, ''), COALESCE(journal_name, '')
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status, paper.Type).Scan(
+	err = s.db.Pool.QueryRow(ctx, query,
+		paper.Title, paper.Abstract, paper.Content, paper.FileUrl, paper.AuthorID, paper.Status, paper.Type,
+		paper.PublicationTitleAmharic, paper.PublicationISCEDBand, paper.PublicationType,
+		paper.JournalType, paper.JournalName,
+	).Scan(
 		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
 		&paper.Status, &paper.Type, &paper.CreatedAt, &paper.UpdatedAt,
+		&paper.PublicationTitleAmharic, &paper.PublicationISCEDBand, &paper.PublicationType,
+		&paper.JournalType, &paper.JournalName,
 	)
 
 	if err != nil {
@@ -527,7 +552,7 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 		UPDATE papers
 		SET title = $1, abstract = $2, content = $3, file_url = $4, status = $5, updated_at = NOW()
 		WHERE id = $6
-		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
+		RETURNING id, title, COALESCE(abstract, ''), COALESCE(content, ''), COALESCE(file_url, ''), author_id, status, created_at, updated_at
 	`
 
 	var paper models.Paper
@@ -541,7 +566,7 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 		return
 	}
 
-	// If admin is publishing or rejecting a recommended paper, notify the editor
+	// If admin is publishing or rejecting a recommended paper, notify the editor and author
 	if req.Status == "published" || req.Status == "rejected" {
 		go func() {
 			// Find the editor who reviewed this paper
@@ -550,16 +575,22 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 				"SELECT reviewer_id FROM reviews WHERE paper_id = $1 LIMIT 1",
 				paper.ID).Scan(&editorID)
 
+			statusText := "published"
+			if req.Status == "rejected" {
+				statusText = "rejected"
+			}
+			message := fmt.Sprintf("Admin decision: Paper '%s' has been %s", paper.Title, statusText)
+
 			if err == nil {
-				statusText := "published"
-				if req.Status == "rejected" {
-					statusText = "rejected"
-				}
-				message := fmt.Sprintf("Admin decision: Paper '%s' has been %s", paper.Title, statusText)
 				s.db.Pool.Exec(context.Background(),
 					"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
 					editorID, message, paper.ID)
 			}
+
+			// Also notify the author
+			s.db.Pool.Exec(context.Background(),
+				"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+				paper.AuthorID, message, paper.ID)
 		}()
 	}
 
@@ -579,7 +610,7 @@ func (s *Server) RecommendPaperForPublication(c *gin.Context) {
 		UPDATE papers
 		SET status = 'recommended_for_publication', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at
+		RETURNING id, title, COALESCE(abstract, ''), COALESCE(content, ''), COALESCE(file_url, ''), author_id, status, created_at, updated_at
 	`
 
 	var paper models.Paper
@@ -593,7 +624,7 @@ func (s *Server) RecommendPaperForPublication(c *gin.Context) {
 		return
 	}
 
-	// Notify all admins
+	// Notify all admins and the author
 	go func() {
 		rows, err := s.db.Pool.Query(context.Background(), "SELECT id FROM users WHERE role = 'admin'")
 		if err == nil {
@@ -608,6 +639,12 @@ func (s *Server) RecommendPaperForPublication(c *gin.Context) {
 				}
 			}
 		}
+
+		// Notify the author
+		authorMessage := fmt.Sprintf("Your paper '%s' has been recommended for publication by an editor", paper.Title)
+		s.db.Pool.Exec(context.Background(),
+			"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+			paper.AuthorID, authorMessage, paper.ID)
 	}()
 
 	// Store editor ID for later notification (we'll add a column for this)
@@ -653,9 +690,9 @@ func (s *Server) UpdatePaperDetails(c *gin.Context) {
 			journal_type = $7, journal_name = $8, indigenous_knowledge = $9,
 			updated_at = NOW()
 		WHERE id = $10
-		RETURNING id, title, abstract, content, file_url, author_id, status, created_at, updated_at,
-				  institution_code, publication_id, publication_isced_band, publication_title_amharic,
-				  publication_date, publication_type, journal_type, journal_name, indigenous_knowledge
+		RETURNING id, title, COALESCE(abstract, ''), COALESCE(content, ''), COALESCE(file_url, ''), author_id, status, created_at, updated_at,
+				  COALESCE(institution_code, ''), COALESCE(publication_id, ''), COALESCE(publication_isced_band, ''), COALESCE(publication_title_amharic, ''),
+				  publication_date, COALESCE(publication_type, ''), COALESCE(journal_type, ''), COALESCE(journal_name, ''), COALESCE(indigenous_knowledge, false)
 	`
 
 	var paper models.Paper
@@ -677,7 +714,7 @@ func (s *Server) UpdatePaperDetails(c *gin.Context) {
 		return
 	}
 
-	// Notify Admin and Coordinator
+	// Notify Admin, Coordinator, and Author
 	go func() {
 		// Notify Admins
 		rows, err := s.db.Pool.Query(context.Background(), "SELECT id FROM users WHERE role = 'admin'")
@@ -708,6 +745,12 @@ func (s *Server) UpdatePaperDetails(c *gin.Context) {
 				}
 			}
 		}
+
+		// Notify the author
+		authorMessage := fmt.Sprintf("Publication details for your paper '%s' have been updated by an editor", paper.Title)
+		s.db.Pool.Exec(context.Background(),
+			"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+			paper.AuthorID, authorMessage, paper.ID)
 	}()
 
 	c.JSON(http.StatusOK, paper)
@@ -782,9 +825,9 @@ func (s *Server) GetReviews(c *gin.Context) {
 
 	if paperID != "" {
 		query = `
-			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, r.comments, r.recommendation, r.created_at, r.updated_at,
-				   reviewer.name as reviewer_name, reviewer.email as reviewer_email,
-				   p.title as paper_title
+			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
+				   COALESCE(reviewer.name, 'Unknown'), COALESCE(reviewer.email, ''),
+				   COALESCE(p.title, 'Unknown Paper')
 			FROM reviews r
 			LEFT JOIN users reviewer ON r.reviewer_id = reviewer.id
 			LEFT JOIN papers p ON r.paper_id = p.id
@@ -794,9 +837,9 @@ func (s *Server) GetReviews(c *gin.Context) {
 		args = append(args, paperID)
 	} else {
 		query = `
-			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, r.comments, r.recommendation, r.created_at, r.updated_at,
-				   reviewer.name as reviewer_name, reviewer.email as reviewer_email,
-				   p.title as paper_title
+			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
+				   COALESCE(reviewer.name, 'Unknown'), COALESCE(reviewer.email, ''),
+				   COALESCE(p.title, 'Unknown Paper')
 			FROM reviews r
 			LEFT JOIN users reviewer ON r.reviewer_id = reviewer.id
 			LEFT JOIN papers p ON r.paper_id = p.id

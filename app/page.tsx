@@ -12,6 +12,13 @@ export default function WelcomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const router = useRouter()
 
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      router.push('/dashboard')
+    }
+  }, [router])
+
   const slides = [
     {
       title: "Welcome to RPMS",

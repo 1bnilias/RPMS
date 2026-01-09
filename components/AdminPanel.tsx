@@ -20,6 +20,8 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [selectedPaper, setSelectedPaper] = useState<PaperWithReviews | null>(null)
   const [editorContactForm, setEditorContactForm] = useState({ paperId: '', message: '' })
+  const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
+  const [showAuthorModal, setShowAuthorModal] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -249,7 +251,16 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <h3 className="font-semibold dark:text-white group-hover:text-red-600 transition-colors">{paper.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedAuthor(paper)
+                                setShowAuthorModal(true)
+                              }}
+                              className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 hover:underline transition-colors text-left"
+                            >
+                              Author: {paper.author_name || 'Unknown'}
+                            </button>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="text-right">
@@ -406,7 +417,15 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               <div>
                 <h3 className="text-2xl font-bold dark:text-white mb-2">{selectedPaper.title}</h3>
                 <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
-                  <p><span className="font-medium">Author:</span> {selectedPaper.author_name}</p>
+                  <button
+                    onClick={() => {
+                      setSelectedAuthor(selectedPaper)
+                      setShowAuthorModal(true)
+                    }}
+                    className="hover:text-red-600 hover:underline transition-colors"
+                  >
+                    <span className="font-medium">Author:</span> {selectedPaper.author_name}
+                  </button>
                   <p><span className="font-medium">Email:</span> {selectedPaper.author_email}</p>
                   <p><span className="font-medium">Submitted:</span> {new Date(selectedPaper.created_at).toLocaleDateString()}</p>
                   <p><span className="font-medium">Status:</span> <span className="capitalize">{selectedPaper.status.replace(/_/g, ' ')}</span></p>
@@ -482,6 +501,85 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                   className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
                 >
                   Publish Paper
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Author Detail Modal */}
+      {showAuthorModal && selectedAuthor && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-xl">
+                  {selectedAuthor.author_name?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAuthorModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_type || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_category || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Rank</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_rank || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qualification</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_qualification || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employment Type</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_employment_type || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_year || 'N/A'}</p>
+                </div>
+              </div>
+
+              {selectedAuthor.author_bio && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bio</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{selectedAuthor.author_bio}</p>
+                </div>
+              )}
+
+              <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowAuthorModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
+                    window.location.href = `/chat?userId=${selectedAuthor.author_id}&message=${message}`
+                  }}
+                  className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Contact Author
                 </button>
               </div>
             </div>
