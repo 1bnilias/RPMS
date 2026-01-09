@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, FileText, Edit, X } from 'lucide-react'
-import { User, Event, Paper, getEvents, createEvent, updateEvent, deleteEvent, publishEvent, getPapers, updatePaperDetails } from '@/lib/api'
+import { Calendar, FileText, Edit, X, Newspaper, Plus } from 'lucide-react'
+import { User, Event, Paper, News, getEvents, createEvent, updateEvent, deleteEvent, publishEvent, getPapers, updatePaperDetails, getNews, createNews, updateNews, deleteNews, publishNews } from '@/lib/api'
 import Header from './Header'
 
 interface CoordinatorDashboardProps {
@@ -31,15 +31,27 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
     indigenous_knowledge: false
   })
 
+  // News state
+  const [news, setNews] = useState<News[]>([])
+  const [showNewsForm, setShowNewsForm] = useState(false)
+  const [editingNews, setEditingNews] = useState<News | null>(null)
+  const [newsForm, setNewsForm] = useState({
+    title: '',
+    summary: '',
+    content: '',
+    category: 'Research'
+  })
+
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('All')
 
   const fetchData = useCallback(async () => {
     try {
-      const [eventsResult, papersResult] = await Promise.all([
+      const [eventsResult, papersResult, newsResult] = await Promise.all([
         getEvents(),
-        getPapers()
+        getPapers(),
+        getNews()
       ])
 
       if (eventsResult.success && eventsResult.data) {
@@ -55,6 +67,10 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         // Assuming they see all papers to validate details, or specifically those ready for validation.
         // Let's show papers that have some details filled or are in 'recommended_for_publication' status.
         setPapers(papersResult.data)
+      }
+
+      if (newsResult.success && newsResult.data) {
+        setNews(newsResult.data)
       }
 
     } catch (error) {
@@ -241,6 +257,73 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  // News handlers
+  const handleCreateNews = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const result = await createNews(newsForm)
+      if (result.success && result.data) {
+        setNews([result.data, ...news])
+        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+        setShowNewsForm(false)
+      }
+    } catch (error) {
+      console.error('Failed to create news:', error)
+    }
+  }
+
+  const handleUpdateNews = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingNews) return
+
+    try {
+      const result = await updateNews(editingNews.id, newsForm)
+      if (result.success && result.data) {
+        setNews(news.map(n => n.id === editingNews.id ? result.data! : n))
+        setEditingNews(null)
+        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+        setShowNewsForm(false)
+      }
+    } catch (error) {
+      console.error('Failed to update news:', error)
+    }
+  }
+
+  const handlePublishNews = async (id: string) => {
+    try {
+      const result = await publishNews(id)
+      if (result.success && result.data) {
+        setNews(news.map(n => n.id === id ? result.data! : n))
+      }
+    } catch (error) {
+      console.error('Failed to publish news:', error)
+    }
+  }
+
+  const handleDeleteNews = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this news post?')) return
+
+    try {
+      const result = await deleteNews(id)
+      if (result.success) {
+        setNews(news.filter(n => n.id !== id))
+      }
+    } catch (error) {
+      console.error('Failed to delete news:', error)
+    }
+  }
+
+  const handleEditNewsClick = (newsItem: News) => {
+    setEditingNews(newsItem)
+    setNewsForm({
+      title: newsItem.title,
+      summary: newsItem.summary,
+      content: newsItem.content,
+      category: newsItem.category
+    })
+    setShowNewsForm(true)
   }
 
   if (loading) {
@@ -700,8 +783,85 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
               </form>
             </div>
           </div>
-        )}
       </div>
-    </div >
+        )}
+
+      {showNewsForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-red-600">
+                {editingNews ? 'Edit News' : 'Create News'}
+              </h2>
+              <button onClick={() => setShowNewsForm(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={newsForm.title}
+                    onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
+                  <select
+                    value={newsForm.category}
+                    onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                  >
+                    <option value="Research">Research</option>
+                    <option value="Event">Event</option>
+                    <option value="Announcement">Announcement</option>
+                    <option value="Award">Award</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Summary</label>
+                  <textarea
+                    value={newsForm.summary}
+                    onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
+                    rows={2}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content</label>
+                  <textarea
+                    value={newsForm.content}
+                    onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
+                    rows={6}
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewsForm(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    {editingNews ? 'Update News' : 'Create News'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

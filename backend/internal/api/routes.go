@@ -111,10 +111,10 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			// News routes
 			news := protected.Group("/news")
 			{
-				news.POST("", middleware.EditorOrAdmin(), server.CreateNews)
-				news.PUT("/:id", middleware.EditorOrAdmin(), server.UpdateNews)
-				news.PUT("/:id/publish", middleware.EditorOrAdmin(), server.PublishNews)
-				news.DELETE("/:id", middleware.EditorOrAdmin(), server.DeleteNews)
+				news.POST("", middleware.CoordinatorOrAdmin(), server.CreateNews)
+				news.PUT("/:id", middleware.CoordinatorOrAdmin(), server.UpdateNews)
+				news.PUT("/:id/publish", middleware.CoordinatorOrAdmin(), server.PublishNews)
+				news.DELETE("/:id", middleware.CoordinatorOrAdmin(), server.DeleteNews)
 			}
 
 			// Chat routes

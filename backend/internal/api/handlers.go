@@ -408,6 +408,8 @@ func (s *Server) GetPapers(c *gin.Context) {
 
 	query := `
 		SELECT p.id, p.title, p.abstract, p.content, p.file_url, p.author_id, p.status, p.created_at, p.updated_at,
+			   p.institution_code, p.publication_id, p.publication_isced_band, p.publication_title_amharic,
+			   p.publication_date, p.publication_type, p.journal_type, p.journal_name, p.indigenous_knowledge,
 			   u.name as author_name, u.email as author_email
 		FROM papers p
 		LEFT JOIN users u ON p.author_id = u.id
@@ -427,6 +429,8 @@ func (s *Server) GetPapers(c *gin.Context) {
 		err := rows.Scan(
 			&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
 			&paper.Status, &paper.CreatedAt, &paper.UpdatedAt,
+			&paper.InstitutionCode, &paper.PublicationID, &paper.PublicationISCEDBand, &paper.PublicationTitleAmharic,
+			&paper.PublicationDate, &paper.PublicationType, &paper.JournalType, &paper.JournalName, &paper.IndigenousKnowledge,
 			&paper.AuthorName, &paper.AuthorEmail,
 		)
 		if err != nil {
