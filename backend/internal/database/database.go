@@ -244,6 +244,49 @@ func RunMigrations(db *Database) error {
 		END $$;
 	`
 
+	// Create likes table
+	createLikesTable := `
+	CREATE TABLE IF NOT EXISTS likes (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+		post_type VARCHAR(10) NOT NULL CHECK (post_type IN ('news', 'event')),
+		post_id UUID NOT NULL,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+		UNIQUE(user_id, post_type, post_id)
+	);`
+
+	// Create comments table
+	createCommentsTable := `
+	CREATE TABLE IF NOT EXISTS comments (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+		post_type VARCHAR(10) NOT NULL CHECK (post_type IN ('news', 'event')),
+		post_id UUID NOT NULL,
+		content TEXT NOT NULL,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+	);`
+
+	// Create shares table
+	createSharesTable := `
+	CREATE TABLE IF NOT EXISTS shares (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+		post_type VARCHAR(10) NOT NULL CHECK (post_type IN ('news', 'event')),
+		post_id UUID NOT NULL,
+		message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+	);`
+
+	// Create indexes for interactions
+	createInteractionIndexes := `
+		CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_type, post_id);
+		CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_type, post_id);
+		CREATE INDEX IF NOT EXISTS idx_shares_post ON shares(post_type, post_id);
+		CREATE INDEX IF NOT EXISTS idx_likes_user ON likes(user_id);
+		CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
+	`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -269,6 +312,10 @@ func RunMigrations(db *Database) error {
 		addEditorSubmissionColumns,
 		updatePaperStatusConstraint,
 		addDateOfBirthToUsers,
+		createLikesTable,
+		createCommentsTable,
+		createSharesTable,
+		createInteractionIndexes,
 	}
 
 	for _, migration := range migrations {

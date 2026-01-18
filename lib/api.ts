@@ -118,13 +118,25 @@ export interface Contact {
     name: string
     email: string
     role: string
-    avatar: string
-    unread_count: number
-    last_message?: {
-        content: string
-        attachment_url?: string
-        created_at: string
     }
+}
+
+export interface Comment {
+    id: string
+    post_id: string
+    post_type: 'news' | 'event'
+    user_id: string
+    user_name: string
+    user_avatar?: string
+    content: string
+    created_at: string
+}
+
+export interface EngagementStats {
+    likes: number
+    comments: number
+    shares: number
+    is_liked: boolean
 }
 
 // Helper to get auth header
@@ -451,4 +463,38 @@ export async function createNotification(userId: string, message: string, paperI
             paper_id: paperId
         })
     })
+}
+
+// Social Features
+export async function likePost(postType: 'news' | 'event', postId: string) {
+    return request<{ liked: boolean }>(`/${postType}/${postId}/like`, {
+        method: 'POST'
+    })
+}
+
+export async function addComment(postType: 'news' | 'event', postId: string, content: string) {
+    return request<Comment>(`/${postType}/${postId}/comment`, {
+        method: 'POST',
+        body: JSON.stringify({ content })
+    })
+}
+
+export async function getComments(postType: 'news' | 'event', postId: string) {
+    return request<Comment[]>(`/${postType}/${postId}/comments`)
+}
+
+export async function shareToMessage(postType: 'news' | 'event', postId: string, receiverId: string, message?: string) {
+    return request<{ success: boolean }>('/chat/share', {
+        method: 'POST',
+        body: JSON.stringify({
+            post_type: postType,
+            post_id: postId,
+            receiver_id: receiverId,
+            message
+        })
+    })
+}
+
+export async function getEngagementStats(postType: 'news' | 'event', postId: string) {
+    return request<EngagementStats>(`/${postType}/${postId}/engagement`)
 }

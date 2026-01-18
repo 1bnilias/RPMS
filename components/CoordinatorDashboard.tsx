@@ -51,7 +51,11 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       }
 
       if (papersResult.success && papersResult.data) {
-        setPapers(papersResult.data)
+        // Filter to show only approved papers
+        const approvedPapers = papersResult.data.filter((paper: Paper) =>
+          paper.status === 'approved'
+        )
+        setPapers(approvedPapers)
       }
 
       if (newsResult.success && newsResult.data) {

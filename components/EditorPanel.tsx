@@ -285,6 +285,37 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     return existingReview ? 'reviewed' : 'pending'
   }
 
+  const sendToAdmin = async (paper: Paper) => {
+    if (!adminUserId) {
+      alert('Admin user not found')
+      return
+    }
+
+    try {
+      // Update paper status to 'under_review' if it's still 'submitted'
+      if (paper.status === 'submitted') {
+        await updatePaper(paper.id, { status: 'under_review' })
+      }
+
+      // Send notification to admin
+      await createNotification(
+        adminUserId,
+        `Paper "${paper.title}" has been reviewed by ${user.name} and is ready for your review.`,
+        paper.id
+      )
+
+      alert('Paper sent to admin successfully!')
+      fetchData() // Refresh the papers list
+    } catch (error) {
+      console.error('Failed to send paper to admin:', error)
+      alert('Failed to send paper to admin')
+    }
+  }
+
+  // Categorize papers
+  const papersForReview = papers.filter(paper => getPaperStatus(paper) === 'pending')
+  const papersReviewed = papers.filter(paper => getPaperStatus(paper) === 'reviewed')
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -303,35 +334,31 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+            {/* Papers for Review Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600">Papers for Review</h2>
+                <h2 className="text-xl font-semibold text-red-600">Papers for Review ({papersForReview.length})</h2>
               </div>
               <div className="p-6">
-                {papers.length === 0 ? (
-                  <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow">
+                {papersForReview.length === 0 ? (
+                  <div className="text-center py-8">
                     <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">No papers found</p>
+                    <p className="text-gray-600 dark:text-gray-400">No papers pending review</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {papers.map((paper) => (
-                      <div key={paper.id} id={`paper-${paper.id}`} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 transition-all hover:shadow-md border border-gray-100 dark:border-gray-700">
+                    {papersForReview.map((paper) => (
+                      <div key={paper.id} id={`paper-${paper.id}`} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 transition-all hover:shadow-md border border-gray-200 dark:border-gray-600">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaperStatus(paper) === 'reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                {getPaperStatus(paper) === 'reviewed' ? 'Reviewed' : 'Pending'}
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Pending Review
                               </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
                                 <Clock className="w-3 h-3 mr-1" />
                                 {new Date(paper.created_at).toLocaleDateString()}
                               </span>
-                              {paper.publication_id && (
-                                <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">
-                                  ID: {paper.publication_id}
-                                </span>
-                              )}
                             </div>
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{paper.title}</h3>
                             <button
@@ -359,30 +386,12 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                           </div>
 
                           <div className="flex flex-col gap-2 ml-4">
-                            {getPaperStatus(paper) === 'pending' && (
-                              <button
-                                onClick={() => setSelectedPaper(paper)}
-                                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center text-sm"
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                Review
-                              </button>
-                            )}
-
                             <button
-                              onClick={() => handleEditClick(paper)}
-                              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center text-sm"
+                              onClick={() => setSelectedPaper(paper)}
+                              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center text-sm whitespace-nowrap"
                             >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </button>
-
-                            <button
-                              onClick={() => handleDetailsClick(paper)}
-                              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center text-sm"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Details
+                              <FileText className="w-4 h-4 mr-2" />
+                              Review
                             </button>
                           </div>
                         </div>
@@ -392,497 +401,604 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="space-y-6 sticky top-24">
-            {selectedPaper && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div className="p-6 border-b dark:border-gray-700">
-                  <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
-                </div>
-                <div className="p-6">
-                  {selectedPaper.abstract && (
-                    <div className="mb-6">
-                      <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSubmitReview} className="space-y-4">
-                    <div>
-                      <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Rating (1-5)
-                      </label>
-                      <select
-                        id="rating"
-                        value={reviewData.rating}
-                        onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      >
-                        {[1, 2, 3, 4, 5].map(num => (
-                          <option key={num} value={num}>{num}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Recommendation
-                      </label>
-                      <select
-                        id="recommendation"
-                        value={reviewData.recommendation}
-                        onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      >
-                        <option value="accept">Recommend Acceptance</option>
-                        <option value="minor_revision">Minor Revision</option>
-                        <option value="major_revision">Major Revision</option>
-                        <option value="reject">Recommend Rejection</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Comments
-                      </label>
-                      <textarea
-                        id="comments"
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        value={reviewData.comments}
-                        onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
-                        placeholder="Provide detailed feedback..."
-                        required
-                      />
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <button
-                        type="submit"
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                      >
-                        Submit Review
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPaper(null)}
-                        className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* Feedback for Author Section */}
+            {/* Papers Reviewed Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
-                  Send Feedback to Author
-                </h2>
+                <h2 className="text-xl font-semibold text-green-600">Papers Reviewed ({papersReviewed.length})</h2>
               </div>
               <div className="p-6">
-                <form onSubmit={sendFeedbackToAuthor} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select Paper
-                    </label>
-                    <select
-                      value={feedbackForm.paperId}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, paperId: e.target.value })}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      required
-                    >
-                      <option value="">Choose a paper...</option>
-                      {papers.map(paper => (
-                        <option key={paper.id} value={paper.id}>
-                          {paper.title}
-                        </option>
-                      ))}
-                    </select>
+                {papersReviewed.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No reviewed papers yet</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Feedback Message
-                    </label>
-                    <textarea
-                      value={feedbackForm.message}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
-                      rows={4}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      placeholder="Enter your feedback for the author..."
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Send Feedback
-                  </button>
-                </form>
-              </div>
-            </div>
+                ) : (
+                  <div className="space-y-4">
+                    {papersReviewed.map((paper) => (
+                      <div key={paper.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 transition-all hover:shadow-md border border-green-200 dark:border-green-800">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Reviewed
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                {new Date(paper.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{paper.title}</h3>
+                            <button
+                              onClick={() => {
+                                setSelectedAuthor(paper)
+                                setShowAuthorModal(true)
+                              }}
+                              className="text-sm text-gray-600 dark:text-gray-300 mb-2 hover:text-red-600 hover:underline transition-colors text-left"
+                            >
+                              Author: {paper.author_name}
+                            </button>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-4">{paper.abstract}</p>
 
-            {/* Contact Admin Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
-                  Contact Admin
-                </h2>
-              </div>
-              <div className="p-6">
-                <form onSubmit={contactAdmin} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select Paper (Optional)
-                    </label>
-                    <select
-                      value={adminContactForm.paperId}
-                      onChange={(e) => setAdminContactForm({ ...adminContactForm, paperId: e.target.value })}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    >
-                      <option value="">General message (no specific paper)</option>
-                      {papers.map(paper => (
-                        <option key={paper.id} value={paper.id}>
-                          {paper.title}
-                        </option>
-                      ))}
-                    </select>
+                            <div className="flex gap-2">
+                              {paper.file_url && (
+                                <button
+                                  onClick={() => window.open(paper.file_url, '_blank')}
+                                  className="flex items-center text-sm text-blue-600 hover:text-blue-700"
+                                >
+                                  <Download className="w-4 h-4 mr-1" />
+                                  Download PDF
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2 ml-4">
+                            <button
+                              onClick={() => setSelectedPaper(paper)}
+                              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center text-sm whitespace-nowrap"
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              View/Edit Review
+                            </button>
+                            <button
+                              onClick={() => sendToAdmin(paper)}
+                              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center text-sm whitespace-nowrap"
+                            >
+                              <Send className="w-4 h-4 mr-2" />
+                              Send to Admin
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Message to Admin
-                    </label>
-                    <textarea
-                      value={adminContactForm.message}
-                      onChange={(e) => setAdminContactForm({ ...adminContactForm, message: e.target.value })}
-                      rows={4}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      placeholder="Enter your message to the admin..."
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Send to Admin
-                  </button>
-                </form>
+                )}
               </div>
             </div>
+                            )}
+
+            <button
+              onClick={() => handleEditClick(paper)}
+              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center text-sm"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </button>
+
+            <button
+              onClick={() => handleDetailsClick(paper)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center text-sm"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Details
+            </button>
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      {editingPaper && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
-              <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <form onSubmit={handleUpdatePaper} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
-                  <input
-                    type="text"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
-                  <textarea
-                    value={editForm.abstract}
-                    onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
-                    rows={6}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) setEditForm({ ...editForm, file })
-                    }}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  />
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setEditingPaper(null)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
-                    Update Paper
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {detailsPaper && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
-              <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution Code</label>
-                  <select
-                    value={detailsForm.institution_code}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  >
-                    <option value="">Select Institution</option>
-                    <option value="SMU">St. Mary's University (SMU)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication ID</label>
-                  <input
-                    type="text"
-                    value={detailsPaper.publication_id || 'Auto-generated upon save'}
-                    disabled
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ISCED Band</label>
-                  <select
-                    value={detailsForm.publication_isced_band}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  >
-                    <option value="">Select Band</option>
-                    <option value="Band 1">Band 1</option>
-                    <option value="Band 2">Band 2</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (English)</label>
-                  <input
-                    type="text"
-                    value={detailsForm.title}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    placeholder="Enter English Title"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (Amharic)</label>
-                  <input
-                    type="text"
-                    value={detailsForm.publication_title_amharic}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    placeholder="Enter Amharic Title"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Date</label>
-                  <input
-                    type="date"
-                    value={detailsForm.publication_date}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_date: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Type</label>
-                  <select
-                    value={detailsForm.publication_type}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, publication_type: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  >
-                    <option value="">Select Type</option>
-                    <option value="Journal Article">Journal Article</option>
-                    <option value="Conference Proceeding">Conference Proceeding</option>
-                    <option value="Book Chapter">Book Chapter</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Type</label>
-                  <select
-                    value={detailsForm.journal_type}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, journal_type: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                  >
-                    <option value="">Select Journal Type</option>
-                    <option value="Local">Local</option>
-                    <option value="International">International</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Name</label>
-                  <input
-                    type="text"
-                    value={detailsForm.journal_name}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, journal_name: e.target.value })}
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                    placeholder="Enter Journal Name"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="indigenous_knowledge"
-                    checked={detailsForm.indigenous_knowledge}
-                    onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
-                    className="h-5 w-5 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="indigenous_knowledge" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Indigenous Knowledge
-                  </label>
-                </div>
-
-                <div className="md:col-span-2 flex justify-end space-x-3 pt-4 border-t dark:border-gray-700 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setDetailsPaper(null)}
-                    className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-                  >
-                    Save Details
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Author Detail Modal */}
-      {showAuthorModal && selectedAuthor && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
-                  <UserIcon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAuthorModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_type || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_category || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Rank</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_rank || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qualification</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_qualification || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employment Type</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_employment_type || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_year || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gender</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_gender || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date of Birth</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_date_of_birth || 'N/A'}</p>
-                </div>
-              </div>
-
-              {selectedAuthor.author_bio && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bio</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{selectedAuthor.author_bio}</p>
-                </div>
-              )}
-
-              <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAuthorModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
-                    router.push(`/chat?userId=${selectedAuthor.author_id}&message=${message}`)
-                  }}
-                  className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Contact Author
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                    ))}
     </div>
+  )
+}
+              </div >
+            </div >
+          </div >
+
+  <div className="space-y-6 sticky top-24">
+    {selectedPaper && (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="p-6 border-b dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
+        </div>
+        <div className="p-6">
+          {selectedPaper.abstract && (
+            <div className="mb-6">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
+              <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmitReview} className="space-y-4">
+            <div>
+              <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Rating (1-5)
+              </label>
+              <select
+                id="rating"
+                value={reviewData.rating}
+                onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              >
+                {[1, 2, 3, 4, 5].map(num => (
+                  <option key={num} value={num}>{num}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Recommendation
+              </label>
+              <select
+                id="recommendation"
+                value={reviewData.recommendation}
+                onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              >
+                <option value="accept">Recommend Acceptance</option>
+                <option value="minor_revision">Minor Revision</option>
+                <option value="major_revision">Major Revision</option>
+                <option value="reject">Recommend Rejection</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Comments
+              </label>
+              <textarea
+                id="comments"
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                value={reviewData.comments}
+                onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
+                placeholder="Provide detailed feedback..."
+                required
+              />
+            </div>
+
+            <div className="flex space-x-2">
+              <button
+                type="submit"
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Submit Review
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPaper(null)}
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {/* Feedback for Author Section */}
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="p-6 border-b dark:border-gray-700">
+        <h2 className="text-xl font-semibold text-red-600 flex items-center">
+          <MessageSquare className="w-5 h-5 mr-2" />
+          Send Feedback to Author
+        </h2>
+      </div>
+      <div className="p-6">
+        <form onSubmit={sendFeedbackToAuthor} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Paper
+            </label>
+            <select
+              value={feedbackForm.paperId}
+              onChange={(e) => setFeedbackForm({ ...feedbackForm, paperId: e.target.value })}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              required
+            >
+              <option value="">Choose a paper...</option>
+              {papers.map(paper => (
+                <option key={paper.id} value={paper.id}>
+                  {paper.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Feedback Message
+            </label>
+            <textarea
+              value={feedbackForm.message}
+              onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
+              rows={4}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              placeholder="Enter your feedback for the author..."
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Send Feedback
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {/* Contact Admin Section */}
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="p-6 border-b dark:border-gray-700">
+        <h2 className="text-xl font-semibold text-red-600 flex items-center">
+          <MessageSquare className="w-5 h-5 mr-2" />
+          Contact Admin
+        </h2>
+      </div>
+      <div className="p-6">
+        <form onSubmit={contactAdmin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Paper (Optional)
+            </label>
+            <select
+              value={adminContactForm.paperId}
+              onChange={(e) => setAdminContactForm({ ...adminContactForm, paperId: e.target.value })}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+            >
+              <option value="">General message (no specific paper)</option>
+              {papers.map(paper => (
+                <option key={paper.id} value={paper.id}>
+                  {paper.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Message to Admin
+            </label>
+            <textarea
+              value={adminContactForm.message}
+              onChange={(e) => setAdminContactForm({ ...adminContactForm, message: e.target.value })}
+              rows={4}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              placeholder="Enter your message to the admin..."
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Send to Admin
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+        </div >
+      </div >
+
+  {/* Modals */ }
+{
+  editingPaper && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
+          <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="p-6">
+          <form onSubmit={handleUpdatePaper} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+              <input
+                type="text"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
+              <textarea
+                value={editForm.abstract}
+                onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
+                rows={6}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) setEditForm({ ...editForm, file })
+                }}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setEditingPaper(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Update Paper
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+{
+  detailsPaper && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
+          <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="p-6">
+          <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution Code</label>
+              <select
+                value={detailsForm.institution_code}
+                onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              >
+                <option value="">Select Institution</option>
+                <option value="SMU">St. Mary's University (SMU)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication ID</label>
+              <input
+                type="text"
+                value={detailsPaper.publication_id || 'Auto-generated upon save'}
+                disabled
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ISCED Band</label>
+              <select
+                value={detailsForm.publication_isced_band}
+                onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              >
+                <option value="">Select Band</option>
+                <option value="Band 1">Band 1</option>
+                <option value="Band 2">Band 2</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (English)</label>
+              <input
+                type="text"
+                value={detailsForm.title}
+                onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                placeholder="Enter English Title"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (Amharic)</label>
+              <input
+                type="text"
+                value={detailsForm.publication_title_amharic}
+                onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                placeholder="Enter Amharic Title"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Date</label>
+              <input
+                type="date"
+                value={detailsForm.publication_date}
+                onChange={(e) => setDetailsForm({ ...detailsForm, publication_date: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Type</label>
+              <select
+                value={detailsForm.publication_type}
+                onChange={(e) => setDetailsForm({ ...detailsForm, publication_type: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              >
+                <option value="">Select Type</option>
+                <option value="Journal Article">Journal Article</option>
+                <option value="Conference Proceeding">Conference Proceeding</option>
+                <option value="Book Chapter">Book Chapter</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Type</label>
+              <select
+                value={detailsForm.journal_type}
+                onChange={(e) => setDetailsForm({ ...detailsForm, journal_type: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+              >
+                <option value="">Select Journal Type</option>
+                <option value="Local">Local</option>
+                <option value="International">International</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Name</label>
+              <input
+                type="text"
+                value={detailsForm.journal_name}
+                onChange={(e) => setDetailsForm({ ...detailsForm, journal_name: e.target.value })}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                placeholder="Enter Journal Name"
+              />
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="indigenous_knowledge"
+                checked={detailsForm.indigenous_knowledge}
+                onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
+                className="h-5 w-5 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+              />
+              <label htmlFor="indigenous_knowledge" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Indigenous Knowledge
+              </label>
+            </div>
+
+            <div className="md:col-span-2 flex justify-end space-x-3 pt-4 border-t dark:border-gray-700 mt-4">
+              <button
+                type="button"
+                onClick={() => setDetailsPaper(null)}
+                className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+              >
+                Save Details
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+{/* Author Detail Modal */ }
+{
+  showAuthorModal && selectedAuthor && (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+              <UserIcon className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAuthorModal(false)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_type || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_category || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Rank</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_rank || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qualification</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_qualification || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employment Type</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_employment_type || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_year || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gender</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_gender || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date of Birth</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_date_of_birth || 'N/A'}</p>
+            </div>
+          </div>
+
+          {selectedAuthor.author_bio && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bio</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{selectedAuthor.author_bio}</p>
+            </div>
+          )}
+
+          <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
+            <button
+              onClick={() => setShowAuthorModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
+                router.push(`/chat?userId=${selectedAuthor.author_id}&message=${message}`)
+              }}
+              className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Contact Author
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+    </div >
   )
 }

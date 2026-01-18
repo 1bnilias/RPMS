@@ -62,6 +62,7 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			auth.POST("/register", server.Register)
 			auth.POST("/login", server.Login)
 			auth.POST("/verify", server.VerifyEmail)
+			auth.POST("/resend-code", server.ResendVerificationCode)
 		}
 
 		// Public routes
@@ -125,6 +126,17 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 				chat.GET("/messages", chatHandler.GetMessages)
 				chat.GET("/contacts", chatHandler.GetContacts)
 				chat.GET("/unread-count", chatHandler.GetUnreadCount)
+			}
+
+			// Interaction routes (likes, comments, shares)
+			interactions := protected.Group("/interactions")
+			{
+				interactions.POST("/like", server.LikePost)
+				interactions.GET("/likes/:postType/:postId", server.GetPostLikes)
+				interactions.POST("/comment", server.AddComment)
+				interactions.GET("/comments/:postType/:postId", server.GetComments)
+				interactions.POST("/share", server.ShareToMessage)
+				interactions.GET("/stats/:postType/:postId", server.GetEngagementStats)
 			}
 
 			// Admin only routes

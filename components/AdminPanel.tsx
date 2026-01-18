@@ -59,7 +59,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       const reviewsResult = await getReviews()
 
       if (papersResult.success && papersResult.data) {
-        // Get papers that are ready for admin approval (have reviews)
+        // Get all papers with their reviews
         const papersWithReviews = papersResult.data.map((paper: Paper) => {
           const paperReviews = reviewsResult.data?.filter((review: Review) =>
             review.paper_id === paper.id
@@ -69,9 +69,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             ...paper,
             reviews: paperReviews
           }
-        }).filter((paper: PaperWithReviews) =>
-          (paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication')
-        )
+        })
 
         setPapers(papersWithReviews)
       }
@@ -88,14 +86,22 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     }
   }
 
-  const handlePublicationDecision = async (paperId: string, publish: boolean) => {
+  // Categorize papers by status
+  const pendingPapers = papers.filter(paper =>
+    paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication'
+  )
+  const approvedPapers = papers.filter(paper => paper.status === 'approved')
+  const rejectedPapers = papers.filter(paper => paper.status === 'rejected')
+
+  const handlePublicationDecision = async (paperId: string, status: 'approved' | 'rejected' | 'published') => {
     try {
       const result = await updatePaper(paperId, {
-        status: publish ? 'published' : 'rejected'
+        status: status
       })
 
       if (result.success) {
-        setPapers(papers.filter(paper => paper.id !== paperId))
+        // Refresh the papers list to show updated status
+        fetchData()
       }
     } catch (error) {
       console.error('Failed to update paper status:', error)
@@ -229,24 +235,25 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               </div>
             </div>
 
+            {/* Pending Papers Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600">Paper Approval</h2>
+                <h2 className="text-xl font-semibold text-yellow-600">Pending Approval ({pendingPapers.length})</h2>
               </div>
               <div className="p-6">
-                {papers.length === 0 ? (
+                {pendingPapers.length === 0 ? (
                   <div className="text-center py-8">
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400">No papers pending approval</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {papers.map(paper => (
+                    {pendingPapers.map(paper => (
                       <div
                         key={paper.id}
                         id={`paper-${paper.id}`}
                         onClick={() => setSelectedPaper(paper)}
-                        className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer group"
+                        className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 cursor-pointer group"
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div>
@@ -282,6 +289,78 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             {paper.reviews.length > 0 ? getRecommendationSummary(paper.reviews) : 'No reviews submitted yet.'}
                           </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Approved Papers Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-green-600">Approved Papers ({approvedPapers.length})</h2>
+              </div>
+              <div className="p-6">
+                {approvedPapers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No approved papers</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {approvedPapers.map(paper => (
+                      <div
+                        key={paper.id}
+                        onClick={() => setSelectedPaper(paper)}
+                        className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 rounded-lg p-4 transition-all duration-300 hover:shadow-md cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">{paper.title}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Approved: {new Date(paper.updated_at).toLocaleDateString()}</p>
+                          </div>
+                          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                            Approved
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Rejected Papers Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600">Rejected Papers ({rejectedPapers.length})</h2>
+              </div>
+              <div className="p-6">
+                {rejectedPapers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No rejected papers</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {rejectedPapers.map(paper => (
+                      <div
+                        key={paper.id}
+                        onClick={() => setSelectedPaper(paper)}
+                        className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-lg p-4 transition-all duration-300 hover:shadow-md cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">{paper.title}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Rejected: {new Date(paper.updated_at).toLocaleDateString()}</p>
+                          </div>
+                          <span className="px-3 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">
+                            Rejected
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -486,21 +565,30 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               <div className="border-t dark:border-gray-700 pt-6 flex justify-end space-x-3">
                 <button
                   onClick={() => {
-                    handlePublicationDecision(selectedPaper.id, false)
+                    handlePublicationDecision(selectedPaper.id, 'rejected')
                     setSelectedPaper(null)
                   }}
-                  className="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 transition-colors font-medium"
+                  className="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
                 >
-                  Reject Paper
+                  Reject
                 </button>
                 <button
                   onClick={() => {
-                    handlePublicationDecision(selectedPaper.id, true)
+                    handlePublicationDecision(selectedPaper.id, 'approved')
+                    setSelectedPaper(null)
+                  }}
+                  className="px-6 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors font-medium"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => {
+                    handlePublicationDecision(selectedPaper.id, 'published')
                     setSelectedPaper(null)
                   }}
                   className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
                 >
-                  Publish Paper
+                  Publish
                 </button>
               </div>
             </div>

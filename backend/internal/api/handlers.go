@@ -176,6 +176,60 @@ func (s *Server) VerifyEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func (s *Server) ResendVerificationCode(c *gin.Context) {
+	var req models.ResendCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	var isVerified bool
+	var email string
+
+	// Check if user exists and is not verified
+	query := "SELECT email, is_verified FROM users WHERE email = $1"
+	err := s.db.Pool.QueryRow(ctx, query, req.Email).Scan(&email, &isVerified)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	if isVerified {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already verified"})
+		return
+	}
+
+	// Generate new 6-digit verification code
+	rand.Seed(time.Now().UnixNano())
+	code := fmt.Sprintf("%06d", rand.Intn(1000000))
+
+	// Update code in database
+	updateQuery := "UPDATE users SET verification_code = $1 WHERE email = $2"
+	_, err = s.db.Pool.Exec(ctx, updateQuery, code, req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update verification code"})
+		return
+	}
+
+	// Send verification email
+	go func() {
+		err := s.emailSender.SendVerificationEmail(req.Email, code)
+		if err != nil {
+			fmt.Printf("Failed to send verification email: %v\n", err)
+		}
+	}()
+
+	// Log verification code to console (Mock Email Service) - KEEPING FOR DEV
+	fmt.Printf("==================================================\n")
+	fmt.Printf("RESEND EMAIL VERIFICATION FOR %s\n", req.Email)
+	fmt.Printf("NEW CODE: %s\n", code)
+	fmt.Printf("==================================================\n")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Verification code resent successfully"})
+}
+
 func (s *Server) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

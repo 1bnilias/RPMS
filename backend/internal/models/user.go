@@ -58,6 +58,10 @@ type VerifyEmailRequest struct {
 	Code  string `json:"code" binding:"required,len=6"`
 }
 
+type ResendCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
 type LoginResponse struct {
 	User  User   `json:"user"`
 	Token string `json:"token"`
