@@ -355,16 +355,16 @@ export default function SignupPage() {
                                     type="text"
                                     required
                                     className="appearance-none block w-full px-3 py-4 border border-gray-300 dark:border-gray-600 placeholder-gray-500 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-center text-2xl font-bold tracking-[0.5em] bg-white dark:bg-gray-700 transition-all"
-                                    placeholder="000000"
+                                    placeholder="00000000"
                                     value={verificationCode}
                                     onChange={(e) => setVerificationCode(e.target.value)}
-                                    maxLength={6}
+                                    maxLength={12}
                                 />
                             </div>
                         </div>
 
                         <div className="text-sm text-center text-gray-600 dark:text-gray-400">
-                            We've sent a 6-digit verification code to <br />
+                            We've sent a verification code to <br />
                             <span className="font-bold text-gray-900 dark:text-white">{formData.email}</span>
                         </div>
 

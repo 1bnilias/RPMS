@@ -28,6 +28,26 @@ type Paper struct {
 	JournalType             string     `json:"journal_type" db:"journal_type"`
 	JournalName             string     `json:"journal_name" db:"journal_name"`
 	IndigenousKnowledge     bool       `json:"indigenous_knowledge" db:"indigenous_knowledge"`
+
+	// Research Project Fields
+	FiscalYear               string  `json:"fiscal_year" db:"fiscal_year"`
+	AllocatedBudget          float64 `json:"allocated_budget" db:"allocated_budget"`
+	ExternalBudget           float64 `json:"external_budget" db:"external_budget"`
+	NRFFund                  float64 `json:"nrf_fund" db:"nrf_fund"`
+	ResearchType             string  `json:"research_type" db:"research_type"`
+	CompletionStatus         string  `json:"completion_status" db:"completion_status"`
+	FemaleResearchers        int     `json:"female_researchers" db:"female_researchers"`
+	MaleResearchers          int     `json:"male_researchers" db:"male_researchers"`
+	OutsideFemaleResearchers int     `json:"outside_female_researchers" db:"outside_female_researchers"`
+	OutsideMaleResearchers   int     `json:"outside_male_researchers" db:"outside_male_researchers"`
+	BenefitedIndustry        string  `json:"benefited_industry" db:"benefited_industry"`
+	EthicalClearance         string  `json:"ethical_clearance" db:"ethical_clearance"`
+	PIName                   string  `json:"pi_name" db:"pi_name"`
+	PIGender                 string  `json:"pi_gender" db:"pi_gender"`
+	CoInvestigators          string  `json:"co_investigators" db:"co_investigators"`
+	ProducedPrototype        string  `json:"produced_prototype" db:"produced_prototype"`
+	HetrilCollaboration      string  `json:"hetril_collaboration" db:"hetril_collaboration"`
+	SubmittedToIncubator     string  `json:"submitted_to_incubator" db:"submitted_to_incubator"`
 }
 
 type CreatePaperRequest struct {
@@ -60,6 +80,26 @@ type UpdatePaperRequest struct {
 	JournalType             string    `json:"journal_type"`
 	JournalName             string    `json:"journal_name"`
 	IndigenousKnowledge     bool      `json:"indigenous_knowledge"`
+
+	// Research Project Fields
+	FiscalYear               string  `json:"fiscal_year"`
+	AllocatedBudget          float64 `json:"allocated_budget"`
+	ExternalBudget           float64 `json:"external_budget"`
+	NRFFund                  float64 `json:"nrf_fund"`
+	ResearchType             string  `json:"research_type"`
+	CompletionStatus         string  `json:"completion_status"`
+	FemaleResearchers        int     `json:"female_researchers"`
+	MaleResearchers          int     `json:"male_researchers"`
+	OutsideFemaleResearchers int     `json:"outside_female_researchers"`
+	OutsideMaleResearchers   int     `json:"outside_male_researchers"`
+	BenefitedIndustry        string  `json:"benefited_industry"`
+	EthicalClearance         string  `json:"ethical_clearance"`
+	PIName                   string  `json:"pi_name"`
+	PIGender                 string  `json:"pi_gender"`
+	CoInvestigators          string  `json:"co_investigators"`
+	ProducedPrototype        string  `json:"produced_prototype"`
+	HetrilCollaboration      string  `json:"hetril_collaboration"`
+	SubmittedToIncubator     string  `json:"submitted_to_incubator"`
 }
 
 type PaperWithAuthor struct {

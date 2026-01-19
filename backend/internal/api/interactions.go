@@ -19,9 +19,15 @@ func (s *Server) LikePost(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 		return
 	}
 
@@ -30,7 +36,7 @@ func (s *Server) LikePost(c *gin.Context) {
 	// Check if already liked
 	var existingLikeID uuid.UUID
 	checkQuery := "SELECT id FROM likes WHERE user_id = $1 AND post_type = $2 AND post_id = $3"
-	err := s.db.Pool.QueryRow(ctx, checkQuery, userID, req.PostType, req.PostID).Scan(&existingLikeID)
+	err = s.db.Pool.QueryRow(ctx, checkQuery, userID, req.PostType, req.PostID).Scan(&existingLikeID)
 
 	if err == nil {
 		// Already liked, so unlike
@@ -47,7 +53,7 @@ func (s *Server) LikePost(c *gin.Context) {
 	// Not liked yet, so like it
 	like := models.Like{
 		ID:        uuid.New(),
-		UserID:    userID.(uuid.UUID),
+		UserID:    userID,
 		PostType:  req.PostType,
 		PostID:    req.PostID,
 		CreatedAt: time.Now(),
@@ -64,7 +70,7 @@ func (s *Server) LikePost(c *gin.Context) {
 	}
 
 	// Create notification for coordinator if it's news or event
-	go s.createEngagementNotification(req.PostType, req.PostID, userID.(uuid.UUID), "like")
+	go s.createEngagementNotification(req.PostType, req.PostID, userID, "like")
 
 	c.JSON(http.StatusOK, gin.H{"message": "Liked successfully", "liked": true, "like": like})
 }
@@ -129,9 +135,15 @@ func (s *Server) AddComment(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 		return
 	}
 
@@ -139,7 +151,7 @@ func (s *Server) AddComment(c *gin.Context) {
 
 	comment := models.Comment{
 		ID:        uuid.New(),
-		UserID:    userID.(uuid.UUID),
+		UserID:    userID,
 		PostType:  req.PostType,
 		PostID:    req.PostID,
 		Content:   req.Content,
@@ -151,7 +163,7 @@ func (s *Server) AddComment(c *gin.Context) {
 		INSERT INTO comments (id, user_id, post_type, post_id, content, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := s.db.Pool.Exec(ctx, insertQuery, comment.ID, comment.UserID, comment.PostType, comment.PostID, comment.Content, comment.CreatedAt, comment.UpdatedAt)
+	_, err = s.db.Pool.Exec(ctx, insertQuery, comment.ID, comment.UserID, comment.PostType, comment.PostID, comment.Content, comment.CreatedAt, comment.UpdatedAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add comment"})
 		return
@@ -166,7 +178,7 @@ func (s *Server) AddComment(c *gin.Context) {
 	comment.UserAvatar = userAvatar
 
 	// Create notification for coordinator
-	go s.createEngagementNotification(req.PostType, req.PostID, userID.(uuid.UUID), "comment")
+	go s.createEngagementNotification(req.PostType, req.PostID, userID, "comment")
 
 	c.JSON(http.StatusOK, gin.H{"message": "Comment added successfully", "comment": comment})
 }
@@ -224,9 +236,15 @@ func (s *Server) ShareToMessage(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
+	userIDStr, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 		return
 	}
 
@@ -249,7 +267,7 @@ func (s *Server) ShareToMessage(c *gin.Context) {
 		INSERT INTO messages (id, sender_id, receiver_id, content, created_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := s.db.Pool.Exec(ctx, insertMessageQuery, messageID, userID, req.RecipientID, messageContent, time.Now())
+	_, err = s.db.Pool.Exec(ctx, insertMessageQuery, messageID, userID, req.RecipientID, messageContent, time.Now())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to share"})
 		return
@@ -258,7 +276,7 @@ func (s *Server) ShareToMessage(c *gin.Context) {
 	// Record share
 	share := models.Share{
 		ID:        uuid.New(),
-		UserID:    userID.(uuid.UUID),
+		UserID:    userID,
 		PostType:  req.PostType,
 		PostID:    req.PostID,
 		MessageID: messageID,
@@ -294,7 +312,7 @@ func (s *Server) GetEngagementStats(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userID")
+	userID, _ := c.Get("user_id")
 	ctx := c.Request.Context()
 
 	stats := models.EngagementStats{
@@ -313,9 +331,15 @@ func (s *Server) GetEngagementStats(c *gin.Context) {
 
 	// Check if current user liked
 	if userID != nil {
-		var likeID uuid.UUID
-		err := s.db.Pool.QueryRow(ctx, "SELECT id FROM likes WHERE user_id = $1 AND post_type = $2 AND post_id = $3", userID, postType, postUUID).Scan(&likeID)
-		stats.UserLiked = err == nil
+		userIDStr, ok := userID.(string)
+		if ok {
+			userUUID, err := uuid.Parse(userIDStr)
+			if err == nil {
+				var likeID uuid.UUID
+				err := s.db.Pool.QueryRow(ctx, "SELECT id FROM likes WHERE user_id = $1 AND post_type = $2 AND post_id = $3", userUUID, postType, postUUID).Scan(&likeID)
+				stats.UserLiked = err == nil
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, stats)

@@ -223,6 +223,28 @@ func RunMigrations(db *Database) error {
 		ALTER TABLE papers ADD COLUMN IF NOT EXISTS indigenous_knowledge BOOLEAN DEFAULT FALSE;
 	`
 
+	// Add Research Project columns to papers
+	addResearchProjectColumns := `
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS fiscal_year VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS allocated_budget NUMERIC DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS external_budget NUMERIC DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS nrf_fund NUMERIC DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS research_type VARCHAR(100);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS completion_status VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS female_researchers INTEGER DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS male_researchers INTEGER DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS outside_female_researchers INTEGER DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS outside_male_researchers INTEGER DEFAULT 0;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS benefited_industry VARCHAR(255);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS ethical_clearance VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS pi_name VARCHAR(255);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS pi_gender VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS co_investigators TEXT;
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS produced_prototype VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS hetril_collaboration VARCHAR(50);
+		ALTER TABLE papers ADD COLUMN IF NOT EXISTS submitted_to_incubator VARCHAR(50);
+	`
+
 	// Update paper status check constraint
 	updatePaperStatusConstraint := `
 		DO $$
@@ -310,6 +332,7 @@ func RunMigrations(db *Database) error {
 		addAuthorProfileColumns,
 		createNewsTable,
 		addEditorSubmissionColumns,
+		addResearchProjectColumns,
 		updatePaperStatusConstraint,
 		addDateOfBirthToUsers,
 		createLikesTable,

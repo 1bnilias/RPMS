@@ -55,7 +55,7 @@ type LoginRequest struct {
 
 type VerifyEmailRequest struct {
 	Email string `json:"email" binding:"required,email"`
-	Code  string `json:"code" binding:"required,len=6"`
+	Code  string `json:"code" binding:"required"`
 }
 
 type ResendCodeRequest struct {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, MessageSquare, Send, X, FileText, Download, Bell, CheckCircle } from 'lucide-react'
+import { Users, MessageSquare, Send, X, FileText, Download, Bell, CheckCircle, AlertCircle } from 'lucide-react'
 import { User, Paper, Review, Notification, getPapers, getReviews, updatePaper, sendMessage, uploadFile, getNotifications, markNotificationRead } from '@/lib/api'
 import Header from './Header'
 

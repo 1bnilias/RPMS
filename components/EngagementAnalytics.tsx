@@ -24,8 +24,10 @@ export default function EngagementAnalytics({ posts }: EngagementAnalyticsProps)
 
         for (const post of posts) {
             try {
-                const postStats = await getEngagementStats(post.type, post.id)
-                newStats.set(post.id, postStats)
+                const result = await getEngagementStats(post.type, post.id)
+                if (result.success && result.data) {
+                    newStats.set(post.id, result.data)
+                }
             } catch (error) {
                 console.error(`Failed to load stats for ${post.id}:`, error)
             }

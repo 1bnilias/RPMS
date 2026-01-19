@@ -28,10 +28,15 @@ export default function ShareModal({ isOpen, onClose, postType, postId, postTitl
 
     const loadContacts = async () => {
         try {
-            const contactsData = await getContacts()
-            setContacts(contactsData)
+            const result = await getContacts()
+            if (result.success && result.data) {
+                setContacts(result.data)
+            } else {
+                setContacts([])
+            }
         } catch (error) {
             console.error('Failed to load contacts:', error)
+            setContacts([])
         }
     }
 

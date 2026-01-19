@@ -46,6 +46,25 @@ export interface Paper {
     journal_type?: string
     journal_name?: string
     indigenous_knowledge?: boolean
+    // Research Project Fields
+    fiscal_year?: string
+    allocated_budget?: number
+    external_budget?: number
+    nrf_fund?: number
+    research_type?: string
+    completion_status?: string
+    female_researchers?: number
+    male_researchers?: number
+    outside_female_researchers?: number
+    outside_male_researchers?: number
+    benefited_industry?: string
+    ethical_clearance?: string
+    pi_name?: string
+    pi_gender?: string
+    co_investigators?: string
+    produced_prototype?: string
+    hetril_collaboration?: string
+    submitted_to_incubator?: string
 }
 
 export interface Notification {
@@ -118,6 +137,11 @@ export interface Contact {
     name: string
     email: string
     role: string
+    avatar?: string
+    unread_count?: number
+    last_message?: {
+        content?: string
+        attachment_url?: string
     }
 }
 
@@ -133,10 +157,10 @@ export interface Comment {
 }
 
 export interface EngagementStats {
-    likes: number
-    comments: number
-    shares: number
-    is_liked: boolean
+    likes_count: number
+    comments_count: number
+    shares_count: number
+    user_liked: boolean
 }
 
 // Helper to get auth header
@@ -467,34 +491,35 @@ export async function createNotification(userId: string, message: string, paperI
 
 // Social Features
 export async function likePost(postType: 'news' | 'event', postId: string) {
-    return request<{ liked: boolean }>(`/${postType}/${postId}/like`, {
-        method: 'POST'
+    return request<{ liked: boolean }>('/interactions/like', {
+        method: 'POST',
+        body: JSON.stringify({ post_type: postType, post_id: postId })
     })
 }
 
 export async function addComment(postType: 'news' | 'event', postId: string, content: string) {
-    return request<Comment>(`/${postType}/${postId}/comment`, {
+    return request<{ message: string; comment: Comment }>('/interactions/comment', {
         method: 'POST',
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ post_type: postType, post_id: postId, content })
     })
 }
 
 export async function getComments(postType: 'news' | 'event', postId: string) {
-    return request<Comment[]>(`/${postType}/${postId}/comments`)
+    return request<{ comments: Comment[]; count: number }>(`/interactions/comments/${postType}/${postId}`)
 }
 
 export async function shareToMessage(postType: 'news' | 'event', postId: string, receiverId: string, message?: string) {
-    return request<{ success: boolean }>('/chat/share', {
+    return request<{ success: boolean }>('/interactions/share', {
         method: 'POST',
         body: JSON.stringify({
             post_type: postType,
             post_id: postId,
-            receiver_id: receiverId,
-            message
+            recipient_id: receiverId,
+            message_text: message
         })
     })
 }
 
 export async function getEngagementStats(postType: 'news' | 'event', postId: string) {
-    return request<EngagementStats>(`/${postType}/${postId}/engagement`)
+    return request<EngagementStats>(`/interactions/stats/${postType}/${postId}`)
 }

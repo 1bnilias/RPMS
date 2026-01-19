@@ -3,15 +3,15 @@ package api
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"net/http"
-	"time"
+	"strings"
 
 	"rpms-backend/internal/auth"
 	"rpms-backend/internal/config"
 	"rpms-backend/internal/database"
 	"rpms-backend/internal/email"
 	"rpms-backend/internal/models"
+	"rpms-backend/internal/supabase"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,6 +23,7 @@ type Server struct {
 	jwtManager  *auth.JWTManager
 	config      *config.Config
 	emailSender *email.EmailSender
+	supabase    *supabase.Client
 }
 
 func NewServer(db *database.Database, cfg *config.Config) *Server {
@@ -31,6 +32,7 @@ func NewServer(db *database.Database, cfg *config.Config) *Server {
 		jwtManager:  auth.NewJWTManager(cfg),
 		config:      cfg,
 		emailSender: email.NewEmailSender(cfg),
+		supabase:    supabase.NewClient(cfg),
 	}
 }
 
@@ -43,81 +45,39 @@ func (s *Server) Register(c *gin.Context) {
 		return
 	}
 
-	// Hash password
-	hashedPassword, err := auth.HashPassword(req.Password)
+	// Hash password (we might still want to store it locally later, or just rely on Supabase)
+	// hashedPassword, err := auth.HashPassword(req.Password)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+	// 	return
+	// }
+
+	// Prepare user metadata for Supabase
+	metadata := map[string]interface{}{
+		"name":            req.Name,
+		"role":            "author",
+		"academic_year":   req.AcademicYear,
+		"author_type":     req.AuthorType,
+		"author_category": req.AuthorCategory,
+		"academic_rank":   req.AcademicRank,
+		"qualification":   req.Qualification,
+		"employment_type": req.EmploymentType,
+		"gender":          req.Gender,
+		"date_of_birth":   req.DateOfBirth,
+	}
+
+	// Register with Supabase
+	_, err := s.supabase.SignUp(req.Email, req.Password, metadata)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to register with Supabase: %v", err)})
 		return
 	}
 
-	// Generate 6-digit verification code
-	// Using a simple random number generator
-	rand.Seed(time.Now().UnixNano())
-	code := fmt.Sprintf("%06d", rand.Intn(1000000))
-
-	// Create user
-	user := models.User{
-		Email:            req.Email,
-		PasswordHash:     hashedPassword,
-		Name:             req.Name,
-		Role:             "author",                 // Force role to author for public registration
-		Avatar:           "",                       // Default
-		Bio:              "",                       // Default
-		Preferences:      map[string]interface{}{}, // Default
-		IsVerified:       false,
-		VerificationCode: code,
-		// Author Profile Fields
-		AcademicYear:   req.AcademicYear,
-		AuthorType:     req.AuthorType,
-		AuthorCategory: req.AuthorCategory,
-		AcademicRank:   req.AcademicRank,
-		Qualification:  req.Qualification,
-		EmploymentType: req.EmploymentType,
-		Gender:         req.Gender,
-		DateOfBirth:    req.DateOfBirth,
-	}
-
-	ctx := c.Request.Context()
-	query := `
-		INSERT INTO users (
-			email, password_hash, name, role, avatar, bio, preferences, is_verified, verification_code,
-			academic_year, author_type, author_category, academic_rank, qualification, employment_type, gender, date_of_birth
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-		RETURNING id, email, name, role, avatar, bio, preferences, is_verified, created_at, updated_at
-	`
-
-	err = s.db.Pool.QueryRow(ctx, query,
-		user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences, user.IsVerified, user.VerificationCode,
-		user.AcademicYear, user.AuthorType, user.AuthorCategory, user.AcademicRank, user.Qualification, user.EmploymentType, user.Gender, user.DateOfBirth,
-	).Scan(
-		&user.ID, &user.Email, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.IsVerified, &user.CreatedAt, &user.UpdatedAt,
-	)
-
-	if err != nil {
-		// Check for unique constraint violation on email
-		// This is a simplification, ideally check err code
-		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
-		return
-	}
-
-	// Send verification email
-	go func() {
-		err := s.emailSender.SendVerificationEmail(user.Email, user.VerificationCode)
-		if err != nil {
-			fmt.Printf("Failed to send verification email: %v\n", err)
-		}
-	}()
-
-	// Log verification code to console (Mock Email Service) - KEEPING FOR DEV
-	fmt.Printf("==================================================\n")
-	fmt.Printf("EMAIL VERIFICATION FOR %s\n", user.Email)
-	fmt.Printf("CODE: %s\n", user.VerificationCode)
-	fmt.Printf("==================================================\n")
+	// We DO NOT insert into local DB yet. We wait for verification.
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Registration successful. Please check your email for the verification code.",
-		"email":   user.Email,
+		"message": "Registration successful. Please check your email for the verification code from Supabase.",
+		"email":   req.Email,
 	})
 }
 
@@ -128,38 +88,104 @@ func (s *Server) VerifyEmail(c *gin.Context) {
 		return
 	}
 
+	// Verify with Supabase
+	sbUser, err := s.supabase.Verify(req.Email, strings.TrimSpace(req.Code))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("Supabase verification failed: %v", err)})
+		return
+	}
+
 	ctx := c.Request.Context()
 	var user models.User
 
-	// Check if user exists and code matches
+	// Check if user exists in local DB
 	query := `
 		SELECT id, email, password_hash, name, role, avatar, bio, preferences, created_at, updated_at
 		FROM users
-		WHERE email = $1 AND verification_code = $2
+		WHERE email = $1
 	`
 
-	err := s.db.Pool.QueryRow(ctx, query, req.Email, req.Code).Scan(
+	err = s.db.Pool.QueryRow(ctx, query, req.Email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid verification code or email"})
-		return
-	}
+		if err == pgx.ErrNoRows {
+			// User not found, insert them now
+			meta := sbUser.UserMetadata
 
-	// Update user as verified and clear code
-	updateQuery := `
-		UPDATE users
-		SET is_verified = TRUE, verification_code = ''
-		WHERE id = $1
-	`
-	_, err = s.db.Pool.Exec(ctx, updateQuery, user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user"})
-		return
-	}
+			// Helper to safely get string from metadata
+			getString := func(key string) string {
+				if v, ok := meta[key].(string); ok {
+					return v
+				}
+				return ""
+			}
 
-	user.IsVerified = true
+			user.ID = uuid.MustParse(sbUser.ID)
+			user.Email = sbUser.Email
+			user.Name = getString("name")
+			user.Role = getString("role")
+			if user.Role == "" {
+				user.Role = "author" // Default
+			}
+			user.Avatar = ""
+			user.Bio = ""
+			user.Preferences = map[string]interface{}{}
+			user.IsVerified = true
+			user.VerificationCode = ""
+
+			// Extract other fields
+			user.AcademicYear = getString("academic_year")
+			user.AuthorType = getString("author_type")
+			user.AuthorCategory = getString("author_category")
+			user.AcademicRank = getString("academic_rank")
+			user.Qualification = getString("qualification")
+			user.EmploymentType = getString("employment_type")
+			user.Gender = getString("gender")
+			user.DateOfBirth = getString("date_of_birth")
+
+			insertQuery := `
+				INSERT INTO users (
+					id, email, password_hash, name, role, avatar, bio, preferences, is_verified, verification_code,
+					academic_year, author_type, author_category, academic_rank, qualification, employment_type, gender, date_of_birth
+				)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+				RETURNING created_at, updated_at
+			`
+
+			// Note: password_hash is empty since we don't have it here.
+			// If we want to keep it, we'd need to pass it in metadata or just rely on Supabase.
+			// For now, we'll store an empty string or a placeholder.
+			user.PasswordHash = ""
+
+			err = s.db.Pool.QueryRow(ctx, insertQuery,
+				user.ID, user.Email, user.PasswordHash, user.Name, user.Role, user.Avatar, user.Bio, user.Preferences, user.IsVerified, user.VerificationCode,
+				user.AcademicYear, user.AuthorType, user.AuthorCategory, user.AcademicRank, user.Qualification, user.EmploymentType, user.Gender, user.DateOfBirth,
+			).Scan(&user.CreatedAt, &user.UpdatedAt)
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user in local database: %v", err)})
+				return
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error checking user"})
+			return
+		}
+	} else {
+		// User exists, just update verification status
+		updateQuery := `
+			UPDATE users
+			SET is_verified = TRUE, verification_code = ''
+			WHERE id = $1
+		`
+		_, err = s.db.Pool.Exec(ctx, updateQuery, user.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user status in local database"})
+			return
+		}
+		user.IsVerified = true
+	}
 
 	// Generate JWT token
 	token, err := s.jwtManager.GenerateToken(&user)
@@ -183,51 +209,22 @@ func (s *Server) ResendVerificationCode(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	var isVerified bool
-	var email string
-
-	// Check if user exists and is not verified
-	query := "SELECT email, is_verified FROM users WHERE email = $1"
-	err := s.db.Pool.QueryRow(ctx, query, req.Email).Scan(&email, &isVerified)
-
+	// Resend with Supabase
+	err := s.supabase.Resend(req.Email)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	if isVerified {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already verified"})
-		return
-	}
-
-	// Generate new 6-digit verification code
-	rand.Seed(time.Now().UnixNano())
-	code := fmt.Sprintf("%06d", rand.Intn(1000000))
-
-	// Update code in database
-	updateQuery := "UPDATE users SET verification_code = $1 WHERE email = $2"
-	_, err = s.db.Pool.Exec(ctx, updateQuery, code, req.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update verification code"})
-		return
-	}
-
-	// Send verification email
-	go func() {
-		err := s.emailSender.SendVerificationEmail(req.Email, code)
-		if err != nil {
-			fmt.Printf("Failed to send verification email: %v\n", err)
+		if sbErr, ok := err.(*supabase.SupabaseError); ok {
+			if sbErr.StatusCode == 429 {
+				c.JSON(http.StatusTooManyRequests, gin.H{"error": "Please wait a few seconds before requesting another code."})
+				return
+			}
+			c.JSON(sbErr.StatusCode, gin.H{"error": sbErr.Message})
+			return
 		}
-	}()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to resend code via Supabase: %v", err)})
+		return
+	}
 
-	// Log verification code to console (Mock Email Service) - KEEPING FOR DEV
-	fmt.Printf("==================================================\n")
-	fmt.Printf("RESEND EMAIL VERIFICATION FOR %s\n", req.Email)
-	fmt.Printf("NEW CODE: %s\n", code)
-	fmt.Printf("==================================================\n")
-
-	c.JSON(http.StatusOK, gin.H{"message": "Verification code resent successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Verification code resent successfully via Supabase"})
 }
 
 func (s *Server) Login(c *gin.Context) {
@@ -237,31 +234,37 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
+	// Authenticate with Supabase
+	fmt.Printf("Attempting Supabase SignIn for: %s\n", req.Email)
+	sbResp, err := s.supabase.SignIn(req.Email, req.Password)
+	if err != nil {
+		fmt.Printf("Supabase SignIn failed: %v\n", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials (Supabase)"})
+		return
+	}
+	fmt.Printf("Supabase SignIn successful. User ID: %s\n", sbResp.User.ID)
+
 	ctx := c.Request.Context()
 	var user models.User
 
+	// Fetch user details from local DB
 	query := `
 		SELECT id, email, password_hash, name, role, avatar, bio, preferences, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
 
-	err := s.db.Pool.QueryRow(ctx, query, req.Email).Scan(
+	err = s.db.Pool.QueryRow(ctx, query, req.Email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Role, &user.Avatar, &user.Bio, &user.Preferences, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		fmt.Printf("Local DB lookup failed: %v\n", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found in local database"})
 		return
 	}
 
-	// Check password
-	if !auth.CheckPassword(req.Password, user.PasswordHash) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
-
-	// Generate JWT token
+	// Generate JWT token (local)
 	token, err := s.jwtManager.GenerateToken(&user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
@@ -465,6 +468,11 @@ func (s *Server) GetPapers(c *gin.Context) {
 		SELECT p.id, p.title, COALESCE(p.abstract, ''), COALESCE(p.content, ''), COALESCE(p.file_url, ''), p.author_id, p.status, COALESCE(p.type, 'Research Paper'), p.created_at, p.updated_at,
 			   COALESCE(p.institution_code, ''), COALESCE(p.publication_id, ''), COALESCE(p.publication_isced_band, ''), COALESCE(p.publication_title_amharic, ''),
 			   p.publication_date, COALESCE(p.publication_type, ''), COALESCE(p.journal_type, ''), COALESCE(p.journal_name, ''), COALESCE(p.indigenous_knowledge, false),
+			   COALESCE(p.fiscal_year, ''), COALESCE(p.allocated_budget, 0), COALESCE(p.external_budget, 0), COALESCE(p.nrf_fund, 0),
+			   COALESCE(p.research_type, ''), COALESCE(p.completion_status, ''), COALESCE(p.female_researchers, 0), COALESCE(p.male_researchers, 0),
+			   COALESCE(p.outside_female_researchers, 0), COALESCE(p.outside_male_researchers, 0), COALESCE(p.benefited_industry, ''),
+			   COALESCE(p.ethical_clearance, ''), COALESCE(p.pi_name, ''), COALESCE(p.pi_gender, ''), COALESCE(p.co_investigators, ''),
+			   COALESCE(p.produced_prototype, ''), COALESCE(p.hetril_collaboration, ''), COALESCE(p.submitted_to_incubator, ''),
 			   COALESCE(u.name, 'Unknown'), COALESCE(u.email, ''), COALESCE(u.academic_year, ''),
 			   COALESCE(u.author_type, ''), COALESCE(u.author_category, ''),
 			   COALESCE(u.academic_rank, ''), COALESCE(u.qualification, ''),
@@ -490,6 +498,11 @@ func (s *Server) GetPapers(c *gin.Context) {
 			&paper.Status, &paper.Type, &paper.CreatedAt, &paper.UpdatedAt,
 			&paper.InstitutionCode, &paper.PublicationID, &paper.PublicationISCEDBand, &paper.PublicationTitleAmharic,
 			&paper.PublicationDate, &paper.PublicationType, &paper.JournalType, &paper.JournalName, &paper.IndigenousKnowledge,
+			&paper.FiscalYear, &paper.AllocatedBudget, &paper.ExternalBudget, &paper.NRFFund,
+			&paper.ResearchType, &paper.CompletionStatus, &paper.FemaleResearchers, &paper.MaleResearchers,
+			&paper.OutsideFemaleResearchers, &paper.OutsideMaleResearchers, &paper.BenefitedIndustry,
+			&paper.EthicalClearance, &paper.PIName, &paper.PIGender, &paper.CoInvestigators,
+			&paper.ProducedPrototype, &paper.HetrilCollaboration, &paper.SubmittedToIncubator,
 			&paper.AuthorName, &paper.AuthorEmail, &paper.AuthorAcademicYear,
 			&paper.AuthorType, &paper.AuthorCategory, &paper.AuthorAcademicRank, &paper.AuthorQualification,
 			&paper.AuthorEmploymentType, &paper.AuthorGender, &paper.AuthorDateOfBirth, &paper.AuthorBio, &paper.AuthorAvatar,
@@ -742,11 +755,21 @@ func (s *Server) UpdatePaperDetails(c *gin.Context) {
 		SET institution_code = $1, publication_id = $2, publication_isced_band = $3,
 			publication_title_amharic = $4, publication_date = $5, publication_type = $6,
 			journal_type = $7, journal_name = $8, indigenous_knowledge = $9,
+			fiscal_year = $10, allocated_budget = $11, external_budget = $12, nrf_fund = $13,
+			research_type = $14, completion_status = $15, female_researchers = $16, male_researchers = $17,
+			outside_female_researchers = $18, outside_male_researchers = $19, benefited_industry = $20,
+			ethical_clearance = $21, pi_name = $22, pi_gender = $23, co_investigators = $24,
+			produced_prototype = $25, hetril_collaboration = $26, submitted_to_incubator = $27,
 			updated_at = NOW()
-		WHERE id = $10
+		WHERE id = $28
 		RETURNING id, title, COALESCE(abstract, ''), COALESCE(content, ''), COALESCE(file_url, ''), author_id, status, created_at, updated_at,
 				  COALESCE(institution_code, ''), COALESCE(publication_id, ''), COALESCE(publication_isced_band, ''), COALESCE(publication_title_amharic, ''),
-				  publication_date, COALESCE(publication_type, ''), COALESCE(journal_type, ''), COALESCE(journal_name, ''), COALESCE(indigenous_knowledge, false)
+				  publication_date, COALESCE(publication_type, ''), COALESCE(journal_type, ''), COALESCE(journal_name, ''), COALESCE(indigenous_knowledge, false),
+				  COALESCE(fiscal_year, ''), COALESCE(allocated_budget, 0), COALESCE(external_budget, 0), COALESCE(nrf_fund, 0),
+				  COALESCE(research_type, ''), COALESCE(completion_status, ''), COALESCE(female_researchers, 0), COALESCE(male_researchers, 0),
+				  COALESCE(outside_female_researchers, 0), COALESCE(outside_male_researchers, 0), COALESCE(benefited_industry, ''),
+				  COALESCE(ethical_clearance, ''), COALESCE(pi_name, ''), COALESCE(pi_gender, ''), COALESCE(co_investigators, ''),
+				  COALESCE(produced_prototype, ''), COALESCE(hetril_collaboration, ''), COALESCE(submitted_to_incubator, '')
 	`
 
 	var paper models.Paper
@@ -754,6 +777,11 @@ func (s *Server) UpdatePaperDetails(c *gin.Context) {
 		req.InstitutionCode, req.PublicationID, req.PublicationISCEDBand,
 		req.PublicationTitleAmharic, req.PublicationDate, req.PublicationType,
 		req.JournalType, req.JournalName, req.IndigenousKnowledge,
+		req.FiscalYear, req.AllocatedBudget, req.ExternalBudget, req.NRFFund,
+		req.ResearchType, req.CompletionStatus, req.FemaleResearchers, req.MaleResearchers,
+		req.OutsideFemaleResearchers, req.OutsideMaleResearchers, req.BenefitedIndustry,
+		req.EthicalClearance, req.PIName, req.PIGender, req.CoInvestigators,
+		req.ProducedPrototype, req.HetrilCollaboration, req.SubmittedToIncubator,
 		paperID,
 	).Scan(
 		&paper.ID, &paper.Title, &paper.Abstract, &paper.Content, &paper.FileUrl, &paper.AuthorID,
@@ -761,6 +789,11 @@ func (s *Server) UpdatePaperDetails(c *gin.Context) {
 		&paper.InstitutionCode, &paper.PublicationID, &paper.PublicationISCEDBand,
 		&paper.PublicationTitleAmharic, &paper.PublicationDate, &paper.PublicationType,
 		&paper.JournalType, &paper.JournalName, &paper.IndigenousKnowledge,
+		&paper.FiscalYear, &paper.AllocatedBudget, &paper.ExternalBudget, &paper.NRFFund,
+		&paper.ResearchType, &paper.CompletionStatus, &paper.FemaleResearchers, &paper.MaleResearchers,
+		&paper.OutsideFemaleResearchers, &paper.OutsideMaleResearchers, &paper.BenefitedIndustry,
+		&paper.EthicalClearance, &paper.PIName, &paper.PIGender, &paper.CoInvestigators,
+		&paper.ProducedPrototype, &paper.HetrilCollaboration, &paper.SubmittedToIncubator,
 	)
 
 	if err != nil {

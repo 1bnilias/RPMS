@@ -37,7 +37,25 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     publication_type: '',
     journal_type: '',
     journal_name: '',
-    indigenous_knowledge: false
+    indigenous_knowledge: false,
+    fiscal_year: '',
+    allocated_budget: 0,
+    external_budget: 0,
+    nrf_fund: 0,
+    research_type: '',
+    completion_status: '',
+    female_researchers: 0,
+    male_researchers: 0,
+    outside_female_researchers: 0,
+    outside_male_researchers: 0,
+    benefited_industry: '',
+    ethical_clearance: '',
+    pi_name: '',
+    pi_gender: '',
+    co_investigators: '',
+    produced_prototype: '',
+    hetril_collaboration: '',
+    submitted_to_incubator: ''
   })
 
 
@@ -148,7 +166,25 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       publication_type: paper.publication_type || '',
       journal_type: paper.journal_type || '',
       journal_name: paper.journal_name || '',
-      indigenous_knowledge: paper.indigenous_knowledge || false
+      indigenous_knowledge: paper.indigenous_knowledge || false,
+      fiscal_year: paper.fiscal_year || '',
+      allocated_budget: paper.allocated_budget || 0,
+      external_budget: paper.external_budget || 0,
+      nrf_fund: paper.nrf_fund || 0,
+      research_type: paper.research_type || '',
+      completion_status: paper.completion_status || '',
+      female_researchers: paper.female_researchers || 0,
+      male_researchers: paper.male_researchers || 0,
+      outside_female_researchers: paper.outside_female_researchers || 0,
+      outside_male_researchers: paper.outside_male_researchers || 0,
+      benefited_industry: paper.benefited_industry || '',
+      ethical_clearance: paper.ethical_clearance || '',
+      pi_name: paper.pi_name || '',
+      pi_gender: paper.pi_gender || '',
+      co_investigators: paper.co_investigators || '',
+      produced_prototype: paper.produced_prototype || '',
+      hetril_collaboration: paper.hetril_collaboration || '',
+      submitted_to_incubator: paper.submitted_to_incubator || ''
     })
   }
 
@@ -476,529 +512,690 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                 )}
               </div>
             </div>
-                            )}
-
-            <button
-              onClick={() => handleEditClick(paper)}
-              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center text-sm"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </button>
-
-            <button
-              onClick={() => handleDetailsClick(paper)}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center text-sm"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Details
-            </button>
           </div>
-        </div>
-      </div>
-                    ))}
-    </div>
-  )
-}
-              </div >
-            </div >
-          </div >
 
-  <div className="space-y-6 sticky top-24">
-    {selectedPaper && (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
-        </div>
-        <div className="p-6">
-          {selectedPaper.abstract && (
-            <div className="mb-6">
-              <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
+          <div className="space-y-6 sticky top-24">
+            {selectedPaper && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="p-6 border-b dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
+                </div>
+                <div className="p-6">
+                  {selectedPaper.abstract && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmitReview} className="space-y-4">
+                    <div>
+                      <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Rating (1-5)
+                      </label>
+                      <select
+                        id="rating"
+                        value={reviewData.rating}
+                        onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        {[1, 2, 3, 4, 5].map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Recommendation
+                      </label>
+                      <select
+                        id="recommendation"
+                        value={reviewData.recommendation}
+                        onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="accept">Recommend Acceptance</option>
+                        <option value="minor_revision">Minor Revision</option>
+                        <option value="major_revision">Major Revision</option>
+                        <option value="reject">Recommend Rejection</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Comments
+                      </label>
+                      <textarea
+                        id="comments"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        value={reviewData.comments}
+                        onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
+                        placeholder="Provide detailed feedback..."
+                        required
+                      />
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        type="submit"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        Submit Review
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPaper(null)}
+                        className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Feedback for Author Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Send Feedback to Author
+                </h2>
+              </div>
+              <div className="p-6">
+                <form onSubmit={sendFeedbackToAuthor} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Paper
+                    </label>
+                    <select
+                      value={feedbackForm.paperId}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, paperId: e.target.value })}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      required
+                    >
+                      <option value="">Choose a paper...</option>
+                      {papers.map(paper => (
+                        <option key={paper.id} value={paper.id}>
+                          {paper.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Feedback Message
+                    </label>
+                    <textarea
+                      value={feedbackForm.message}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter your feedback for the author..."
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Feedback
+                  </button>
+                </form>
+              </div>
             </div>
-          )}
 
-          <form onSubmit={handleSubmitReview} className="space-y-4">
-            <div>
-              <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Rating (1-5)
-              </label>
-              <select
-                id="rating"
-                value={reviewData.rating}
-                onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              >
-                {[1, 2, 3, 4, 5].map(num => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
+            {/* Contact Admin Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-red-600 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Contact Admin
+                </h2>
+              </div>
+              <div className="p-6">
+                <form onSubmit={contactAdmin} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Paper (Optional)
+                    </label>
+                    <select
+                      value={adminContactForm.paperId}
+                      onChange={(e) => setAdminContactForm({ ...adminContactForm, paperId: e.target.value })}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="">General message (no specific paper)</option>
+                      {papers.map(paper => (
+                        <option key={paper.id} value={paper.id}>
+                          {paper.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Message to Admin
+                    </label>
+                    <textarea
+                      value={adminContactForm.message}
+                      onChange={(e) => setAdminContactForm({ ...adminContactForm, message: e.target.value })}
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      placeholder="Enter your message to the admin..."
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send to Admin
+                  </button>
+                </form>
+              </div>
             </div>
-
-            <div>
-              <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Recommendation
-              </label>
-              <select
-                id="recommendation"
-                value={reviewData.recommendation}
-                onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              >
-                <option value="accept">Recommend Acceptance</option>
-                <option value="minor_revision">Minor Revision</option>
-                <option value="major_revision">Major Revision</option>
-                <option value="reject">Recommend Rejection</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Comments
-              </label>
-              <textarea
-                id="comments"
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                value={reviewData.comments}
-                onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
-                placeholder="Provide detailed feedback..."
-                required
-              />
-            </div>
-
-            <div className="flex space-x-2">
-              <button
-                type="submit"
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-              >
-                Submit Review
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedPaper(null)}
-                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-
-    {/* Feedback for Author Section */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-      <div className="p-6 border-b dark:border-gray-700">
-        <h2 className="text-xl font-semibold text-red-600 flex items-center">
-          <MessageSquare className="w-5 h-5 mr-2" />
-          Send Feedback to Author
-        </h2>
-      </div>
-      <div className="p-6">
-        <form onSubmit={sendFeedbackToAuthor} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select Paper
-            </label>
-            <select
-              value={feedbackForm.paperId}
-              onChange={(e) => setFeedbackForm({ ...feedbackForm, paperId: e.target.value })}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              required
-            >
-              <option value="">Choose a paper...</option>
-              {papers.map(paper => (
-                <option key={paper.id} value={paper.id}>
-                  {paper.title}
-                </option>
-              ))}
-            </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Feedback Message
-            </label>
-            <textarea
-              value={feedbackForm.message}
-              onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
-              rows={4}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              placeholder="Enter your feedback for the author..."
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Send Feedback
-          </button>
-        </form>
-      </div>
-    </div>
-
-    {/* Contact Admin Section */}
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-      <div className="p-6 border-b dark:border-gray-700">
-        <h2 className="text-xl font-semibold text-red-600 flex items-center">
-          <MessageSquare className="w-5 h-5 mr-2" />
-          Contact Admin
-        </h2>
-      </div>
-      <div className="p-6">
-        <form onSubmit={contactAdmin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select Paper (Optional)
-            </label>
-            <select
-              value={adminContactForm.paperId}
-              onChange={(e) => setAdminContactForm({ ...adminContactForm, paperId: e.target.value })}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-            >
-              <option value="">General message (no specific paper)</option>
-              {papers.map(paper => (
-                <option key={paper.id} value={paper.id}>
-                  {paper.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Message to Admin
-            </label>
-            <textarea
-              value={adminContactForm.message}
-              onChange={(e) => setAdminContactForm({ ...adminContactForm, message: e.target.value })}
-              rows={4}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              placeholder="Enter your message to the admin..."
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Send to Admin
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
         </div >
       </div >
 
-  {/* Modals */ }
-{
-  editingPaper && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
-          <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        <div className="p-6">
-          <form onSubmit={handleUpdatePaper} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
-              <input
-                type="text"
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
-              <textarea
-                value={editForm.abstract}
-                onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
-                rows={6}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) setEditForm({ ...editForm, file })
-                }}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              />
-            </div>
-            <div className="flex justify-end space-x-2 pt-4">
-              <button
-                type="button"
-                onClick={() => setEditingPaper(null)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Update Paper
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-{
-  detailsPaper && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
-          <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        <div className="p-6">
-          <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Institution Code</label>
-              <select
-                value={detailsForm.institution_code}
-                onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              >
-                <option value="">Select Institution</option>
-                <option value="SMU">St. Mary's University (SMU)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication ID</label>
-              <input
-                type="text"
-                value={detailsPaper.publication_id || 'Auto-generated upon save'}
-                disabled
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md cursor-not-allowed"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ISCED Band</label>
-              <select
-                value={detailsForm.publication_isced_band}
-                onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              >
-                <option value="">Select Band</option>
-                <option value="Band 1">Band 1</option>
-                <option value="Band 2">Band 2</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (English)</label>
-              <input
-                type="text"
-                value={detailsForm.title}
-                onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                placeholder="Enter English Title"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Title (Amharic)</label>
-              <input
-                type="text"
-                value={detailsForm.publication_title_amharic}
-                onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                placeholder="Enter Amharic Title"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Date</label>
-              <input
-                type="date"
-                value={detailsForm.publication_date}
-                onChange={(e) => setDetailsForm({ ...detailsForm, publication_date: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Publication Type</label>
-              <select
-                value={detailsForm.publication_type}
-                onChange={(e) => setDetailsForm({ ...detailsForm, publication_type: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              >
-                <option value="">Select Type</option>
-                <option value="Journal Article">Journal Article</option>
-                <option value="Conference Proceeding">Conference Proceeding</option>
-                <option value="Book Chapter">Book Chapter</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Type</label>
-              <select
-                value={detailsForm.journal_type}
-                onChange={(e) => setDetailsForm({ ...detailsForm, journal_type: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-              >
-                <option value="">Select Journal Type</option>
-                <option value="Local">Local</option>
-                <option value="International">International</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Journal Name</label>
-              <input
-                type="text"
-                value={detailsForm.journal_name}
-                onChange={(e) => setDetailsForm({ ...detailsForm, journal_name: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                placeholder="Enter Journal Name"
-              />
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                id="indigenous_knowledge"
-                checked={detailsForm.indigenous_knowledge}
-                onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
-                className="h-5 w-5 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-              />
-              <label htmlFor="indigenous_knowledge" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Indigenous Knowledge
-              </label>
-            </div>
-
-            <div className="md:col-span-2 flex justify-end space-x-3 pt-4 border-t dark:border-gray-700 mt-4">
-              <button
-                type="button"
-                onClick={() => setDetailsPaper(null)}
-                className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-              >
-                Save Details
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-{/* Author Detail Modal */ }
-{
-  showAuthorModal && selectedAuthor && (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
-              <UserIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
+      {/* Modals */}
+      {
+        editingPaper && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
+                <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <form onSubmit={handleUpdatePaper} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+                    <input
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Abstract</label>
+                    <textarea
+                      value={editForm.abstract}
+                      onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
+                      rows={6}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Revised Version</label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) setEditForm({ ...editForm, file })
+                      }}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setEditingPaper(null)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                      Update Paper
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-          <button
-            onClick={() => setShowAuthorModal(false)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_type || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_category || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Rank</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_rank || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qualification</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_qualification || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employment Type</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_employment_type || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_year || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gender</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_gender || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date of Birth</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_date_of_birth || 'N/A'}</p>
+        )
+      }
+
+      {
+        detailsPaper && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
+                <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <form onSubmit={handleUpdateDetails} className="space-y-8">
+                  {/* Section 1: Project Identification */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-red-600" />
+                      Project Identification
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Institution Code</label>
+                        <select
+                          value={detailsForm.institution_code}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, institution_code: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="">Select Institution</option>
+                          <option value="SMU">St. Mary's University (SMU)</option>
+                          <option value="SMU_Green">SMU_Green</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fiscal Year</label>
+                        <input
+                          type="text"
+                          value={detailsForm.fiscal_year}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, fiscal_year: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                          placeholder="e.g. 2024/25"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ISCED Band</label>
+                        <select
+                          value={detailsForm.publication_isced_band}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, publication_isced_band: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="">Select Band</option>
+                          <option value="01">01 - Education</option>
+                          <option value="02">02 - Arts and humanities</option>
+                          <option value="03">03 - Social sciences, journalism and information</option>
+                          <option value="04">04 - Business, administration and law</option>
+                          <option value="05">05 - Natural sciences, mathematics and statistics</option>
+                          <option value="06">06 - Information and Communication Technologies</option>
+                          <option value="07">07 - Engineering, manufacturing and construction</option>
+                          <option value="08">08 - Agriculture, forestry, fisheries and veterinary</option>
+                          <option value="09">09 - Health and welfare</option>
+                          <option value="10">10 - Services</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Research ID</label>
+                        <input
+                          type="text"
+                          value={detailsPaper.publication_id || 'Auto-generated'}
+                          disabled
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-100 dark:text-gray-500 rounded-md"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Research Name (English)</label>
+                        <input
+                          type="text"
+                          value={detailsForm.title}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, title: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Research Name (Amharic)</label>
+                        <input
+                          type="text"
+                          value={detailsForm.publication_title_amharic}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, publication_title_amharic: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Budget & Funding */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <AlertCircle className="w-5 h-5 mr-2 text-green-600" />
+                      Budget & Funding
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allocated Budget</label>
+                        <input
+                          type="number"
+                          value={detailsForm.allocated_budget}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, allocated_budget: parseFloat(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">External Budget</label>
+                        <input
+                          type="number"
+                          value={detailsForm.external_budget}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, external_budget: parseFloat(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NRF Fund</label>
+                        <input
+                          type="number"
+                          value={detailsForm.nrf_fund}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, nrf_fund: parseFloat(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Research Team */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <UserIcon className="w-5 h-5 mr-2 text-blue-600" />
+                      Research Team
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Female Res.</label>
+                        <input
+                          type="number"
+                          value={detailsForm.female_researchers}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, female_researchers: parseInt(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Male Res.</label>
+                        <input
+                          type="number"
+                          value={detailsForm.male_researchers}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, male_researchers: parseInt(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Outside Female</label>
+                        <input
+                          type="number"
+                          value={detailsForm.outside_female_researchers}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, outside_female_researchers: parseInt(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Outside Male</label>
+                        <input
+                          type="number"
+                          value={detailsForm.outside_male_researchers}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, outside_male_researchers: parseInt(e.target.value) })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: Principal Investigator */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <UserIcon className="w-5 h-5 mr-2 text-purple-600" />
+                      Principal Investigator
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PI Name</label>
+                        <input
+                          type="text"
+                          value={detailsForm.pi_name}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, pi_name: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PI Gender</label>
+                        <select
+                          value={detailsForm.pi_gender}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, pi_gender: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Co-Investigators</label>
+                        <textarea
+                          value={detailsForm.co_investigators}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, co_investigators: e.target.value })}
+                          rows={2}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                          placeholder="List co-investigators separated by commas"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 5: Status & Outcomes */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <CheckCircle className="w-5 h-5 mr-2 text-orange-600" />
+                      Status & Outcomes
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Research Type</label>
+                        <select
+                          value={detailsForm.research_type}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, research_type: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="">Select Type</option>
+                          <option value="AP">Applied (AP)</option>
+                          <option value="BS">Basic (BS)</option>
+                          <option value="EX">Experimental (EX)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Completion Status</label>
+                        <select
+                          value={detailsForm.completion_status}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, completion_status: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="">Select Status</option>
+                          <option value="C">Completed (C)</option>
+                          <option value="G">Ongoing (G)</option>
+                          <option value="T">Terminated (T)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Benefited Industry</label>
+                        <input
+                          type="text"
+                          value={detailsForm.benefited_industry}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, benefited_industry: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ethical Clearance</label>
+                        <select
+                          value={detailsForm.ethical_clearance}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, ethical_clearance: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="N">No</option>
+                          <option value="Y">Yes</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Produced Prototype?</label>
+                        <select
+                          value={detailsForm.produced_prototype}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, produced_prototype: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="N">No</option>
+                          <option value="Y">Yes</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">HETRIL Collaboration?</label>
+                        <select
+                          value={detailsForm.hetril_collaboration}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, hetril_collaboration: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="N">No</option>
+                          <option value="Y">Yes</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Submitted to Incubator?</label>
+                        <select
+                          value={detailsForm.submitted_to_incubator}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, submitted_to_incubator: e.target.value })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        >
+                          <option value="N">No</option>
+                          <option value="Y">Yes</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="indigenous_knowledge"
+                          checked={detailsForm.indigenous_knowledge}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, indigenous_knowledge: e.target.checked })}
+                          className="h-5 w-5 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="indigenous_knowledge" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Indigenous Knowledge
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setDetailsPaper(null)}
+                      className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Save All Details
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
+        )
+      }
 
-          {selectedAuthor.author_bio && (
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bio</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{selectedAuthor.author_bio}</p>
+      {/* Author Detail Modal */}
+      {
+        showAuthorModal && selectedAuthor && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                    <UserIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAuthorModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_type || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_category || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Rank</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_rank || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qualification</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_qualification || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employment Type</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_employment_type || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_academic_year || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gender</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_gender || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date of Birth</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_date_of_birth || 'N/A'}</p>
+                  </div>
+                </div>
+
+                {selectedAuthor.author_bio && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bio</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{selectedAuthor.author_bio}</p>
+                  </div>
+                )}
+
+                <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowAuthorModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
+                      router.push(`/chat?userId=${selectedAuthor.author_id}&message=${message}`)
+                    }}
+                    className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Contact Author
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
-
-          <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
-            <button
-              onClick={() => setShowAuthorModal(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              Close
-            </button>
-            <button
-              onClick={() => {
-                const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
-                router.push(`/chat?userId=${selectedAuthor.author_id}&message=${message}`)
-              }}
-              className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
-            >
-              <MessageSquare className="w-4 h-4" />
-              Contact Author
-            </button>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+        )
+      }
     </div >
   )
 }

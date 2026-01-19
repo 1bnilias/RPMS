@@ -43,8 +43,10 @@ export default function SocialPost({
 
     const loadEngagementData = async () => {
         try {
-            const statsData = await getEngagementStats(type, id)
-            setStats(statsData)
+            const result = await getEngagementStats(type, id)
+            if (result.success && result.data) {
+                setStats(result.data)
+            }
         } catch (error) {
             console.error('Failed to load engagement data:', error)
         }
@@ -52,10 +54,15 @@ export default function SocialPost({
 
     const loadComments = async () => {
         try {
-            const { comments: commentsData } = await getComments(type, id)
-            setComments(commentsData)
+            const result = await getComments(type, id)
+            if (result.success && result.data) {
+                setComments(result.data.comments || [])
+            } else {
+                setComments([])
+            }
         } catch (error) {
             console.error('Failed to load comments:', error)
+            setComments([])
         }
     }
 
@@ -65,11 +72,11 @@ export default function SocialPost({
         try {
             const result = await likePost(type, id)
             // Update stats optimistically
-            if (stats) {
+            if (result.success && result.data && stats) {
                 setStats({
                     ...stats,
-                    user_liked: result.liked,
-                    likes_count: result.liked ? stats.likes_count + 1 : stats.likes_count - 1
+                    user_liked: result.data.liked,
+                    likes_count: result.data.liked ? stats.likes_count + 1 : stats.likes_count - 1
                 })
             }
         } catch (error) {
@@ -85,12 +92,14 @@ export default function SocialPost({
 
         setLoading(true)
         try {
-            const { comment } = await addComment(type, id, commentText)
-            setComments([comment, ...comments])
-            setCommentText('')
-            // Update comment count
-            if (stats) {
-                setStats({ ...stats, comments_count: stats.comments_count + 1 })
+            const result = await addComment(type, id, commentText)
+            if (result.success && result.data) {
+                setComments([result.data.comment, ...(comments || [])])
+                setCommentText('')
+                // Update comment count
+                if (stats) {
+                    setStats({ ...stats, comments_count: stats.comments_count + 1 })
+                }
             }
         } catch (error) {
             console.error('Failed to add comment:', error)
@@ -181,10 +190,11 @@ export default function SocialPost({
                     {/* Like Button */}
                     <button
                         onClick={(e) => {
+                            const target = e.currentTarget
                             handleLike()
                             // Trigger heartbeat animation
-                            e.currentTarget.classList.add('animate-heartbeat')
-                            setTimeout(() => e.currentTarget.classList.remove('animate-heartbeat'), 300)
+                            target.classList.add('animate-heartbeat')
+                            setTimeout(() => target.classList.remove('animate-heartbeat'), 300)
                         }}
                         disabled={liking}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-smooth ${stats?.user_liked
@@ -245,7 +255,7 @@ export default function SocialPost({
 
                     {/* Comments List */}
                     <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
-                        {comments.length === 0 ? (
+                        {(!comments || comments.length === 0) ? (
                             <p className="text-center text-gray-500 dark:text-gray-400 py-4">
                                 No comments yet. Be the first to comment!
                             </p>
