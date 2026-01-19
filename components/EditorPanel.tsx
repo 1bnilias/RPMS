@@ -18,7 +18,21 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null)
   const [editForm, setEditForm] = useState({ title: '', abstract: '', file: null as File | null })
-  const [reviewData, setReviewData] = useState({ rating: 5, comments: '', recommendation: 'accept' as const })
+  const [reviewData, setReviewData] = useState({
+    rating: 100,
+    problem_statement: 100,
+    literature_review: 100,
+    methodology: 100,
+    results: 100,
+    conclusion: 100,
+    originality: 100,
+    clarity_organization: 100,
+    contribution_knowledge: 100,
+    technical_quality: 100,
+    comments: '',
+    recommendation: 'accept' as const
+  })
+  const [showReviewModal, setShowReviewModal] = useState(false)
   const [feedbackForm, setFeedbackForm] = useState({ paperId: '', message: '' })
   const [adminContactForm, setAdminContactForm] = useState({ paperId: '', message: '' })
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
@@ -46,8 +60,6 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     completion_status: '',
     female_researchers: 0,
     male_researchers: 0,
-    outside_female_researchers: 0,
-    outside_male_researchers: 0,
     benefited_industry: '',
     ethical_clearance: '',
     pi_name: '',
@@ -133,19 +145,44 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
           paper_id: selectedPaper.id,
           reviewer_id: user.id,
           rating: reviewData.rating,
+          problem_statement: reviewData.problem_statement,
+          literature_review: reviewData.literature_review,
+          methodology: reviewData.methodology,
+          results: reviewData.results,
+          conclusion: reviewData.conclusion,
+          originality: reviewData.originality,
+          clarity_organization: reviewData.clarity_organization,
+          contribution_knowledge: reviewData.contribution_knowledge,
+          technical_quality: reviewData.technical_quality,
           comments: reviewData.comments,
           recommendation: reviewData.recommendation
         }
 
         const result = await createReview(reviewDataSubmit)
         if (result.success) {
-          // Update papers list to remove reviewed paper
-          setPapers(papers.filter(p => p.id !== selectedPaper.id))
+          // Refresh data to move paper to reviewed list
+          await fetchData()
           setSelectedPaper(null)
-          setReviewData({ rating: 5, comments: '', recommendation: 'accept' })
+          setShowReviewModal(false)
+          setReviewData({
+            rating: 100,
+            problem_statement: 100,
+            literature_review: 100,
+            methodology: 100,
+            results: 100,
+            conclusion: 100,
+            originality: 100,
+            clarity_organization: 100,
+            contribution_knowledge: 100,
+            technical_quality: 100,
+            comments: '',
+            recommendation: 'accept'
+          })
+          alert('Review submitted successfully!')
         }
       } catch (error) {
         console.error('Failed to submit review:', error)
+        alert('Failed to submit review')
       }
     }
   }
@@ -175,8 +212,6 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       completion_status: paper.completion_status || '',
       female_researchers: paper.female_researchers || 0,
       male_researchers: paper.male_researchers || 0,
-      outside_female_researchers: paper.outside_female_researchers || 0,
-      outside_male_researchers: paper.outside_male_researchers || 0,
       benefited_industry: paper.benefited_industry || '',
       ethical_clearance: paper.ethical_clearance || '',
       pi_name: paper.pi_name || '',
@@ -423,7 +458,10 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
                           <div className="flex flex-col gap-2 ml-4">
                             <button
-                              onClick={() => setSelectedPaper(paper)}
+                              onClick={() => {
+                                setSelectedPaper(paper)
+                                setShowReviewModal(true)
+                              }}
                               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center text-sm whitespace-nowrap"
                             >
                               <FileText className="w-4 h-4 mr-2" />
@@ -438,6 +476,9 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
               </div>
             </div>
 
+          </div>
+
+          <div className="space-y-6 sticky top-24">
             {/* Papers Reviewed Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
@@ -452,58 +493,51 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                 ) : (
                   <div className="space-y-4">
                     {papersReviewed.map((paper) => (
-                      <div key={paper.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 transition-all hover:shadow-md border border-green-200 dark:border-green-800">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Reviewed
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {new Date(paper.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{paper.title}</h3>
+                      <div key={paper.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 transition-all hover:shadow-md border border-green-200 dark:border-green-800">
+                        <div className="flex flex-col gap-2">
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{paper.title}</h3>
+                          <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                            <span>{paper.author_name}</span>
+                            <span>{new Date(paper.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
                             <button
                               onClick={() => {
-                                setSelectedAuthor(paper)
-                                setShowAuthorModal(true)
+                                setSelectedPaper(paper)
+                                setShowReviewModal(true)
                               }}
-                              className="text-sm text-gray-600 dark:text-gray-300 mb-2 hover:text-red-600 hover:underline transition-colors text-left"
+                              className="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
                             >
-                              Author: {paper.author_name}
-                            </button>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-4">{paper.abstract}</p>
-
-                            <div className="flex gap-2">
-                              {paper.file_url && (
-                                <button
-                                  onClick={() => window.open(paper.file_url, '_blank')}
-                                  className="flex items-center text-sm text-blue-600 hover:text-blue-700"
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  Download PDF
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2 ml-4">
-                            <button
-                              onClick={() => setSelectedPaper(paper)}
-                              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center text-sm whitespace-nowrap"
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              View/Edit Review
+                              Edit Review
                             </button>
                             <button
-                              onClick={() => sendToAdmin(paper)}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center text-sm whitespace-nowrap"
+                              onClick={() => handleDetailsClick(paper)}
+                              className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded hover:bg-yellow-200 border border-yellow-200"
                             >
-                              <Send className="w-4 h-4 mr-2" />
-                              Send to Admin
+                              Validate Details
                             </button>
+                            {paper.file_url && (
+                              <button
+                                onClick={() => window.open(paper.file_url, '_blank')}
+                                className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100 border border-blue-200 flex items-center"
+                              >
+                                <Download className="w-3 h-3 mr-1" />
+                                Download PDF
+                              </button>
+                            )}
+                            {paper.status === 'under_review' ? (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded border border-green-200 flex items-center">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Sent to Admin
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => sendToAdmin(paper)}
+                                className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                              >
+                                Send to Admin
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -512,90 +546,6 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="space-y-6 sticky top-24">
-            {selectedPaper && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div className="p-6 border-b dark:border-gray-700">
-                  <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Author: {selectedPaper.author_name || 'Unknown'}</p>
-                </div>
-                <div className="p-6">
-                  {selectedPaper.abstract && (
-                    <div className="mb-6">
-                      <h3 className="font-medium text-gray-900 dark:text-white mb-2">Abstract</h3>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded">{selectedPaper.abstract}</p>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSubmitReview} className="space-y-4">
-                    <div>
-                      <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Rating (1-5)
-                      </label>
-                      <select
-                        id="rating"
-                        value={reviewData.rating}
-                        onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      >
-                        {[1, 2, 3, 4, 5].map(num => (
-                          <option key={num} value={num}>{num}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="recommendation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Recommendation
-                      </label>
-                      <select
-                        id="recommendation"
-                        value={reviewData.recommendation}
-                        onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      >
-                        <option value="accept">Recommend Acceptance</option>
-                        <option value="minor_revision">Minor Revision</option>
-                        <option value="major_revision">Major Revision</option>
-                        <option value="reject">Recommend Rejection</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="comments" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Comments
-                      </label>
-                      <textarea
-                        id="comments"
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[120px] focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        value={reviewData.comments}
-                        onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
-                        placeholder="Provide detailed feedback..."
-                        required
-                      />
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <button
-                        type="submit"
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                      >
-                        Submit Review
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPaper(null)}
-                        className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
 
             {/* Feedback for Author Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -640,7 +590,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+                    className="w-full bg-blue-100 text-blue-800 px-4 py-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center border border-blue-200"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Send Feedback
@@ -691,7 +641,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
+                    className="w-full bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center border border-gray-200"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Send to Admin
@@ -700,8 +650,8 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
               </div>
             </div>
           </div>
-        </div >
-      </div >
+        </div>
+      </div>
 
       {/* Modals */}
       {
@@ -742,25 +692,16 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                       accept=".pdf,.doc,.docx"
                       onChange={(e) => {
                         const file = e.target.files?.[0]
-                        if (file) setEditForm({ ...editForm, file })
+                        if (file) {
+                          setEditForm({ ...editForm, file })
+                        }
                       }}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
                     />
                   </div>
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setEditingPaper(null)}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                    >
-                      Update Paper
-                    </button>
+                  <div className="flex justify-end space-x-2">
+                    <button type="button" onClick={() => setEditingPaper(null)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+                    <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Update Paper</button>
                   </div>
                 </form>
               </div>
@@ -802,13 +743,20 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fiscal Year</label>
-                        <input
-                          type="text"
+                        <select
                           value={detailsForm.fiscal_year}
                           onChange={(e) => setDetailsForm({ ...detailsForm, fiscal_year: e.target.value })}
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                          placeholder="e.g. 2024/25"
-                        />
+                        >
+                          <option value="">Select Fiscal Year</option>
+                          <option value="2019/20">2019/20</option>
+                          <option value="2020/21">2020/21</option>
+                          <option value="2021/22">2021/22</option>
+                          <option value="2022/23">2022/23</option>
+                          <option value="2023/24">2023/24</option>
+                          <option value="2024/25">2024/25</option>
+                          <option value="2025/26">2025/26</option>
+                        </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ISCED Band</label>
@@ -860,94 +808,11 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                     </div>
                   </div>
 
-                  {/* Section 2: Budget & Funding */}
-                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <AlertCircle className="w-5 h-5 mr-2 text-green-600" />
-                      Budget & Funding
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allocated Budget</label>
-                        <input
-                          type="number"
-                          value={detailsForm.allocated_budget}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, allocated_budget: parseFloat(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">External Budget</label>
-                        <input
-                          type="number"
-                          value={detailsForm.external_budget}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, external_budget: parseFloat(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NRF Fund</label>
-                        <input
-                          type="number"
-                          value={detailsForm.nrf_fund}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, nrf_fund: parseFloat(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 3: Research Team */}
+                  {/* Section 2: PI Details */}
                   <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                       <UserIcon className="w-5 h-5 mr-2 text-blue-600" />
-                      Research Team
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Female Res.</label>
-                        <input
-                          type="number"
-                          value={detailsForm.female_researchers}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, female_researchers: parseInt(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Male Res.</label>
-                        <input
-                          type="number"
-                          value={detailsForm.male_researchers}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, male_researchers: parseInt(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Outside Female</label>
-                        <input
-                          type="number"
-                          value={detailsForm.outside_female_researchers}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, outside_female_researchers: parseInt(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Outside Male</label>
-                        <input
-                          type="number"
-                          value={detailsForm.outside_male_researchers}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, outside_male_researchers: parseInt(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 4: Principal Investigator */}
-                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <UserIcon className="w-5 h-5 mr-2 text-purple-600" />
-                      Principal Investigator
+                      Principal Investigator (PI) Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -969,17 +834,86 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                           <option value="">Select Gender</option>
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
-                          <option value="Other">Other</option>
                         </select>
                       </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Co-Investigators</label>
-                        <textarea
-                          value={detailsForm.co_investigators}
-                          onChange={(e) => setDetailsForm({ ...detailsForm, co_investigators: e.target.value })}
-                          rows={2}
+                    </div>
+                  </div>
+
+                  {/* Section 3: Budget & Funding */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <AlertCircle className="w-5 h-5 mr-2 text-green-600" />
+                      Budget & Funding
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allocated Budget</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={detailsForm.allocated_budget}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, allocated_budget: parseFloat(e.target.value) || 0 })}
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                          placeholder="List co-investigators separated by commas"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">External Budget</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={detailsForm.external_budget}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, external_budget: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NRF Fund</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={detailsForm.nrf_fund}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, nrf_fund: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Co-Investigators</label>
+                      <textarea
+                        value={detailsForm.co_investigators}
+                        onChange={(e) => setDetailsForm({ ...detailsForm, co_investigators: e.target.value })}
+                        rows={2}
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        placeholder="List co-investigators separated by commas"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 4: Research Team */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <UserIcon className="w-5 h-5 mr-2 text-purple-600" />
+                      Research Team
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Female Researchers</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={detailsForm.female_researchers}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, female_researchers: parseInt(e.target.value) || 0 })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Male Researchers</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={detailsForm.male_researchers}
+                          onChange={(e) => setDetailsForm({ ...detailsForm, male_researchers: parseInt(e.target.value) || 0 })}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
                         />
                       </div>
                     </div>
@@ -1108,11 +1042,10 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
         )
       }
 
-      {/* Author Detail Modal */}
       {
         showAuthorModal && selectedAuthor && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
@@ -1196,6 +1129,110 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
           </div>
         )
       }
-    </div >
+
+      {/* Review Modal */}
+      {
+        showReviewModal && selectedPaper && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
+                <button onClick={() => setShowReviewModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <form onSubmit={handleSubmitReview} className="space-y-6">
+                  {/* Rating Sliders */}
+                  {[
+                    'Problem Statement',
+                    'Literature Review',
+                    'Methodology',
+                    'Results',
+                    'Conclusion',
+                    'Originality',
+                    'Clarity and Organization',
+                    'Contribution to Knowledge',
+                    'Technical Quality'
+                  ].map((criteria) => {
+                    const key = criteria.toLowerCase().replace(/ /g, '_') as keyof typeof reviewData;
+                    return (
+                      <div key={key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {criteria} ({(reviewData as any)[key]}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={(reviewData as any)[key]}
+                          onChange={(e) => setReviewData({ ...reviewData, [key]: parseInt(e.target.value) })}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-red-600"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>0%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Overall Rating ({reviewData.rating}%)
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={reviewData.rating}
+                      onChange={(e) => setReviewData({ ...reviewData, rating: parseInt(e.target.value) })}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-red-600"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>0%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Recommendation
+                    </label>
+                    <select
+                      value={reviewData.recommendation}
+                      onChange={(e) => setReviewData({ ...reviewData, recommendation: e.target.value as any })}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                    >
+                      <option value="accept">Recommend Acceptance</option>
+                      <option value="minor_revision">Minor Revision</option>
+                      <option value="major_revision">Major Revision</option>
+                      <option value="reject">Recommend Rejection</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Comments</label>
+                    <textarea
+                      value={reviewData.comments}
+                      onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md min-h-[100px]"
+                      placeholder="Provide detailed feedback..."
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <button type="button" onClick={() => setShowReviewModal(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+                    <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Submit Review</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div>
   )
 }

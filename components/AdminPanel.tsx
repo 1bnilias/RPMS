@@ -22,6 +22,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [editorContactForm, setEditorContactForm] = useState({ paperId: '', message: '' })
   const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
   const [showAuthorModal, setShowAuthorModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'reviewed' | 'validated'>('reviewed')
 
   useEffect(() => {
     fetchData()
@@ -204,7 +205,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       <Header user={user} title="Admin Panel" onLogout={onLogout} />
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
@@ -235,195 +236,141 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               </div>
             </div>
 
-            {/* Pending Papers Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-yellow-600">Pending Approval ({pendingPapers.length})</h2>
-              </div>
-              <div className="p-6">
-                {pendingPapers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">No papers pending approval</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingPapers.map(paper => (
-                      <div
-                        key={paper.id}
-                        id={`paper-${paper.id}`}
-                        onClick={() => setSelectedPaper(paper)}
-                        className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 cursor-pointer group"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-semibold dark:text-white group-hover:text-red-600 transition-colors">{paper.title}</h3>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedAuthor(paper)
-                                setShowAuthorModal(true)
-                              }}
-                              className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 hover:underline transition-colors text-left"
-                            >
-                              Author: {paper.author_name || 'Unknown'}
-                            </button>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
+            {/* Tabs */}
+            <div className="flex space-x-4 mb-6">
+              <button
+                onClick={() => setActiveTab('reviewed')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'reviewed'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+              >
+                Reviewed Papers
+              </button>
+              <button
+                onClick={() => setActiveTab('validated')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'validated'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+              >
+                Validated Papers
+              </button>
+            </div>
+
+            {/* Content Area */}
+            {activeTab === 'reviewed' ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="p-6 border-b dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-yellow-600">Pending Approval ({pendingPapers.length})</h2>
+                </div>
+                <div className="p-6">
+                  {pendingPapers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400">No papers pending approval</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingPapers.map(paper => (
+                        <div
+                          key={paper.id}
+                          id={`paper-${paper.id}`}
+                          onClick={() => setSelectedPaper(paper)}
+                          className="border dark:border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 cursor-pointer group"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <h3 className="font-semibold dark:text-white group-hover:text-red-600 transition-colors">{paper.title}</h3>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedAuthor(paper)
+                                  setShowAuthorModal(true)
+                                }}
+                                className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 hover:underline transition-colors text-left"
+                              >
+                                Author: {paper.author_name || 'Unknown'}
+                              </button>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Submitted: {new Date(paper.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {paper.reviews.length} Review{paper.reviews.length !== 1 ? 's' : ''}
+                              </span>
+                              <p className="text-lg font-bold text-blue-600">
+                                {paper.reviews.length > 0 ? `${getAverageScore(paper.reviews)}/5` : 'No Rating'}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              {paper.reviews.length} Review{paper.reviews.length !== 1 ? 's' : ''}
-                            </span>
-                            <p className="text-lg font-bold text-blue-600">
-                              {paper.reviews.length > 0 ? `${getAverageScore(paper.reviews)}/5` : 'No Rating'}
+
+                          {paper.abstract && (
+                            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">{paper.abstract}</p>
+                          )}
+
+                          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                            <p className="text-sm font-medium mb-2 dark:text-white">Review Summary:</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              {paper.reviews.length > 0 ? getRecommendationSummary(paper.reviews) : 'No reviews submitted yet.'}
                             </p>
                           </div>
                         </div>
-
-                        {paper.abstract && (
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">{paper.abstract}</p>
-                        )}
-
-                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                          <p className="text-sm font-medium mb-2 dark:text-white">Review Summary:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {paper.reviews.length > 0 ? getRecommendationSummary(paper.reviews) : 'No reviews submitted yet.'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-
-            {/* Approved Papers Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-green-600">Approved Papers ({approvedPapers.length})</h2>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                <div className="p-6 border-b dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-blue-600">Validated Papers</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                    <thead className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold">
+                      <tr>
+                        <th className="p-4">Title</th>
+                        <th className="p-4">PI Name</th>
+                        <th className="p-4">Institution</th>
+                        <th className="p-4">Fiscal Year</th>
+                        <th className="p-4">Budget</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {papers.filter(p => p.pi_name || p.institution_code).length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-gray-500">No validated papers found.</td>
+                        </tr>
+                      ) : (
+                        papers.filter(p => p.pi_name || p.institution_code).map(paper => (
+                          <tr key={paper.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td className="p-4 font-medium text-gray-900 dark:text-white">{paper.title}</td>
+                            <td className="p-4">{paper.pi_name || '-'}</td>
+                            <td className="p-4">{paper.institution_code || '-'}</td>
+                            <td className="p-4">{paper.fiscal_year || '-'}</td>
+                            <td className="p-4">{paper.allocated_budget ? paper.allocated_budget.toLocaleString() : '-'}</td>
+                            <td className="p-4 capitalize">{paper.status.replace(/_/g, ' ')}</td>
+                            <td className="p-4">
+                              <button
+                                onClick={() => setSelectedPaper(paper)}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                View Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="p-6">
-                {approvedPapers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">No approved papers</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {approvedPapers.map(paper => (
-                      <div
-                        key={paper.id}
-                        onClick={() => setSelectedPaper(paper)}
-                        className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 rounded-lg p-4 transition-all duration-300 hover:shadow-md cursor-pointer"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white">{paper.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Approved: {new Date(paper.updated_at).toLocaleDateString()}</p>
-                          </div>
-                          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                            Approved
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Rejected Papers Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600">Rejected Papers ({rejectedPapers.length})</h2>
-              </div>
-              <div className="p-6">
-                {rejectedPapers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">No rejected papers</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {rejectedPapers.map(paper => (
-                      <div
-                        key={paper.id}
-                        onClick={() => setSelectedPaper(paper)}
-                        className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-lg p-4 transition-all duration-300 hover:shadow-md cursor-pointer"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white">{paper.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Author: {paper.author_name || 'Unknown'}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Rejected: {new Date(paper.updated_at).toLocaleDateString()}</p>
-                          </div>
-                          <span className="px-3 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">
-                            Rejected
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Contact Editor Section */}
+            )}
           </div>
 
-          <div className="space-y-6 sticky top-6">
-            {/* Notifications Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                  <Bell className="w-5 h-5 mr-2" />
-                  Notifications
-                </h2>
-                {notifications.some(n => !n.is_read) && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Mark all as read
-                  </button>
-                )}
-              </div>
-              <div className="p-6">
-                {notifications.length === 0 ? (
-                  <div className="text-center py-4">
-                    <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No notifications</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {notifications.map(notification => (
-                      <div
-                        key={notification.id}
-                        onClick={() => handleNotificationClick(notification)}
-                        className={`p-3 rounded-lg border transition-colors cursor-pointer ${notification.is_read
-                          ? 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700'
-                          : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 ring-1 ring-red-100 dark:ring-red-900/20'
-                          }`}
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          <p className={`text-sm ${notification.is_read ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'}`}>
-                            {notification.message}
-                          </p>
-                          {!notification.is_read && (
-                            <div className="w-2 h-2 bg-red-600 rounded-full mt-1.5 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-2">
-                          {new Date(notification.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
+          <div className="lg:col-span-2 space-y-6 sticky top-6">
             {/* Contact Editor Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
@@ -476,6 +423,74 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                     Send to Editor
                   </button>
                 </form>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Approved Papers Section */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="p-6 border-b dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-green-600">Approved Papers ({approvedPapers.length})</h2>
+                </div>
+                <div className="p-6">
+                  {approvedPapers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400">No approved papers</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {approvedPapers.map(paper => (
+                        <div
+                          key={paper.id}
+                          onClick={() => setSelectedPaper(paper)}
+                          className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 rounded-lg p-4 transition-all duration-300 hover:shadow-md cursor-pointer"
+                        >
+                          <div className="flex flex-col gap-2">
+                            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{paper.title}</h3>
+                            <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                              <span>{paper.author_name || 'Unknown'}</span>
+                              <span>{new Date(paper.updated_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Rejected Papers Section */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="p-6 border-b dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-red-600">Rejected Papers ({rejectedPapers.length})</h2>
+                </div>
+                <div className="p-6">
+                  {rejectedPapers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400">No rejected papers</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {rejectedPapers.map(paper => (
+                        <div
+                          key={paper.id}
+                          onClick={() => setSelectedPaper(paper)}
+                          className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-lg p-4 transition-all duration-300 hover:shadow-md cursor-pointer"
+                        >
+                          <div className="flex flex-col gap-2">
+                            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{paper.title}</h3>
+                            <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                              <span>{paper.author_name || 'Unknown'}</span>
+                              <span>{new Date(paper.updated_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -532,6 +547,48 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                     <Download className="w-4 h-4 mr-2" />
                     Download Paper
                   </a>
+                </div>
+              )}
+
+              {/* Research Details Section */}
+              {(selectedPaper.pi_name || selectedPaper.institution_code) && (
+                <div className="border-t dark:border-gray-700 pt-6">
+                  <h4 className="text-lg font-semibold dark:text-white mb-4">Research Project Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
+                    <div>
+                      <h5 className="font-medium text-gray-900 dark:text-white mb-2 border-b dark:border-gray-600 pb-1">Project Identification</h5>
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-gray-500 dark:text-gray-400">Institution Code:</span> <span className="dark:text-gray-200">{selectedPaper.institution_code || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Fiscal Year:</span> <span className="dark:text-gray-200">{selectedPaper.fiscal_year || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Research Type:</span> <span className="dark:text-gray-200">{selectedPaper.research_type || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Completion Status:</span> <span className="dark:text-gray-200">{selectedPaper.completion_status || '-'}</span></p>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-900 dark:text-white mb-2 border-b dark:border-gray-600 pb-1">Principal Investigator</h5>
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-gray-500 dark:text-gray-400">Name:</span> <span className="dark:text-gray-200">{selectedPaper.pi_name || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Gender:</span> <span className="dark:text-gray-200">{selectedPaper.pi_gender || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Co-Investigators:</span> <span className="dark:text-gray-200">{selectedPaper.co_investigators || '-'}</span></p>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-900 dark:text-white mb-2 border-b dark:border-gray-600 pb-1">Budget & Funding</h5>
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-gray-500 dark:text-gray-400">Allocated Budget:</span> <span className="dark:text-gray-200">{selectedPaper.allocated_budget?.toLocaleString() || '0'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">External Budget:</span> <span className="dark:text-gray-200">{selectedPaper.external_budget?.toLocaleString() || '0'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">NRF Fund:</span> <span className="dark:text-gray-200">{selectedPaper.nrf_fund?.toLocaleString() || '0'}</span></p>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-900 dark:text-white mb-2 border-b dark:border-gray-600 pb-1">Outcomes</h5>
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-gray-500 dark:text-gray-400">Benefited Industry:</span> <span className="dark:text-gray-200">{selectedPaper.benefited_industry || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Produced Prototype:</span> <span className="dark:text-gray-200">{selectedPaper.produced_prototype || '-'}</span></p>
+                        <p><span className="text-gray-500 dark:text-gray-400">Submitted to Incubator:</span> <span className="dark:text-gray-200">{selectedPaper.submitted_to_incubator || '-'}</span></p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

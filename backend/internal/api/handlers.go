@@ -912,7 +912,7 @@ func (s *Server) GetReviews(c *gin.Context) {
 
 	if paperID != "" {
 		query = `
-			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
+			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.problem_statement, 0), COALESCE(r.literature_review, 0), COALESCE(r.methodology, 0), COALESCE(r.results, 0), COALESCE(r.conclusion, 0), COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
 				   COALESCE(reviewer.name, 'Unknown'), COALESCE(reviewer.email, ''),
 				   COALESCE(p.title, 'Unknown Paper')
 			FROM reviews r
@@ -924,7 +924,7 @@ func (s *Server) GetReviews(c *gin.Context) {
 		args = append(args, paperID)
 	} else {
 		query = `
-			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
+			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.problem_statement, 0), COALESCE(r.literature_review, 0), COALESCE(r.methodology, 0), COALESCE(r.results, 0), COALESCE(r.conclusion, 0), COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
 				   COALESCE(reviewer.name, 'Unknown'), COALESCE(reviewer.email, ''),
 				   COALESCE(p.title, 'Unknown Paper')
 			FROM reviews r
@@ -945,7 +945,7 @@ func (s *Server) GetReviews(c *gin.Context) {
 	for rows.Next() {
 		var review models.ReviewWithReviewer
 		err := rows.Scan(
-			&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating, &review.Comments,
+			&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating, &review.ProblemStatement, &review.LiteratureReview, &review.Methodology, &review.Results, &review.Conclusion, &review.Comments,
 			&review.Recommendation, &review.CreatedAt, &review.UpdatedAt,
 			&review.ReviewerName, &review.ReviewerEmail, &review.PaperTitle,
 		)
@@ -974,22 +974,27 @@ func (s *Server) CreateReview(c *gin.Context) {
 	}
 
 	review := models.Review{
-		PaperID:        req.PaperID,
-		ReviewerID:     reviewerID,
-		Rating:         req.Rating,
-		Comments:       req.Comments,
-		Recommendation: req.Recommendation,
+		PaperID:          req.PaperID,
+		ReviewerID:       reviewerID,
+		Rating:           req.Rating,
+		ProblemStatement: req.ProblemStatement,
+		LiteratureReview: req.LiteratureReview,
+		Methodology:      req.Methodology,
+		Results:          req.Results,
+		Conclusion:       req.Conclusion,
+		Comments:         req.Comments,
+		Recommendation:   req.Recommendation,
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO reviews (paper_id, reviewer_id, rating, comments, recommendation)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, paper_id, reviewer_id, rating, comments, recommendation, created_at, updated_at
+		INSERT INTO reviews (paper_id, reviewer_id, rating, problem_statement, literature_review, methodology, results, conclusion, comments, recommendation)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id, paper_id, reviewer_id, rating, problem_statement, literature_review, methodology, results, conclusion, comments, recommendation, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, review.PaperID, review.ReviewerID, review.Rating, review.Comments, review.Recommendation).Scan(
-		&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating, &review.Comments,
+	err = s.db.Pool.QueryRow(ctx, query, review.PaperID, review.ReviewerID, review.Rating, review.ProblemStatement, review.LiteratureReview, review.Methodology, review.Results, review.Conclusion, review.Comments, review.Recommendation).Scan(
+		&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating, &review.ProblemStatement, &review.LiteratureReview, &review.Methodology, &review.Results, &review.Conclusion, &review.Comments,
 		&review.Recommendation, &review.CreatedAt, &review.UpdatedAt,
 	)
 

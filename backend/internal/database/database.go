@@ -309,6 +309,15 @@ func RunMigrations(db *Database) error {
 		CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
 	`
 
+	// Add detailed rating columns to reviews
+	addReviewRatingColumns := `
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS problem_statement INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS literature_review INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS methodology INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS results INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS conclusion INTEGER DEFAULT 0;
+	`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -339,6 +348,7 @@ func RunMigrations(db *Database) error {
 		createCommentsTable,
 		createSharesTable,
 		createInteractionIndexes,
+		addReviewRatingColumns,
 	}
 
 	for _, migration := range migrations {

@@ -7,27 +7,42 @@ import (
 )
 
 type Review struct {
-	ID             uuid.UUID `json:"id" db:"id"`
-	PaperID        uuid.UUID `json:"paper_id" db:"paper_id"`
-	ReviewerID     uuid.UUID `json:"reviewer_id" db:"reviewer_id"`
-	Rating         int       `json:"rating" db:"rating"`
-	Comments       string    `json:"comments" db:"comments"`
-	Recommendation string    `json:"recommendation" db:"recommendation"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+	ID               uuid.UUID `json:"id" db:"id"`
+	PaperID          uuid.UUID `json:"paper_id" db:"paper_id"`
+	ReviewerID       uuid.UUID `json:"reviewer_id" db:"reviewer_id"`
+	Rating           int       `json:"rating" db:"rating"`
+	ProblemStatement int       `json:"problem_statement" db:"problem_statement"`
+	LiteratureReview int       `json:"literature_review" db:"literature_review"`
+	Methodology      int       `json:"methodology" db:"methodology"`
+	Results          int       `json:"results" db:"results"`
+	Conclusion       int       `json:"conclusion" db:"conclusion"`
+	Comments         string    `json:"comments" db:"comments"`
+	Recommendation   string    `json:"recommendation" db:"recommendation"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type CreateReviewRequest struct {
-	PaperID        uuid.UUID `json:"paper_id" binding:"required"`
-	Rating         int       `json:"rating" binding:"required,min=1,max=5"`
-	Comments       string    `json:"comments"`
-	Recommendation string    `json:"recommendation" binding:"required,oneof=accept minor_revision major_revision reject"`
+	PaperID          uuid.UUID `json:"paper_id" binding:"required"`
+	Rating           int       `json:"rating" binding:"required,min=1,max=5"`
+	ProblemStatement int       `json:"problem_statement" binding:"required,min=1,max=5"`
+	LiteratureReview int       `json:"literature_review" binding:"required,min=1,max=5"`
+	Methodology      int       `json:"methodology" binding:"required,min=1,max=5"`
+	Results          int       `json:"results" binding:"required,min=1,max=5"`
+	Conclusion       int       `json:"conclusion" binding:"required,min=1,max=5"`
+	Comments         string    `json:"comments"`
+	Recommendation   string    `json:"recommendation" binding:"required,oneof=accept minor_revision major_revision reject"`
 }
 
 type UpdateReviewRequest struct {
-	Rating         int    `json:"rating" binding:"required,min=1,max=5"`
-	Comments       string `json:"comments"`
-	Recommendation string `json:"recommendation" binding:"required,oneof=accept minor_revision major_revision reject"`
+	Rating           int    `json:"rating" binding:"required,min=1,max=5"`
+	ProblemStatement int    `json:"problem_statement" binding:"required,min=1,max=5"`
+	LiteratureReview int    `json:"literature_review" binding:"required,min=1,max=5"`
+	Methodology      int    `json:"methodology" binding:"required,min=1,max=5"`
+	Results          int    `json:"results" binding:"required,min=1,max=5"`
+	Conclusion       int    `json:"conclusion" binding:"required,min=1,max=5"`
+	Comments         string `json:"comments"`
+	Recommendation   string `json:"recommendation" binding:"required,oneof=accept minor_revision major_revision reject"`
 }
 
 type ReviewWithReviewer struct {

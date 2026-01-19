@@ -81,6 +81,11 @@ export interface Review {
     paper_id: string
     reviewer_id: string
     rating: number
+    problem_statement?: number
+    literature_review?: number
+    methodology?: number
+    results?: number
+    conclusion?: number
     comments?: string
     recommendation: 'accept' | 'minor_revision' | 'major_revision' | 'reject'
     created_at: string
