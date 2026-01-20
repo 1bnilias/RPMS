@@ -719,10 +719,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                         <video
                           src={item.video_url}
                           className="w-full h-full object-cover"
-                          muted
-                          loop
-                          onMouseOver={(e) => e.currentTarget.play()}
-                          onMouseOut={(e) => e.currentTarget.pause()}
+                          controls
                         />
                       ) : item.image_url ? (
                         <img
@@ -822,452 +819,462 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         </div>
 
         {/* Promotion Modal */}
-        {showPromotionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
-                  <p className="text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
-                </div>
-                <button onClick={() => setShowPromotionModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="p-6 overflow-y-auto">
-                {papers.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400 text-lg">No papers available for promotion</p>
+        {
+          showPromotionModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
+                    <p className="text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {papers.map(paper => (
-                      <div key={paper.id} className="border dark:border-gray-700 rounded-xl p-5 hover:border-red-500 transition-all bg-gray-50 dark:bg-gray-750">
-                        <div className="flex flex-col h-full">
-                          <div className="mb-4">
-                            <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 mb-2">{paper.title}</h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                              <UserIcon className="w-4 h-4" />
-                              {paper.author_name || 'Unknown Author'}
+                  <button onClick={() => setShowPromotionModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                  {papers.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">No papers available for promotion</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {papers.map(paper => (
+                        <div key={paper.id} className="border dark:border-gray-700 rounded-xl p-5 hover:border-red-500 transition-all bg-gray-50 dark:bg-gray-750">
+                          <div className="flex flex-col h-full">
+                            <div className="mb-4">
+                              <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 mb-2">{paper.title}</h3>
+                              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                <UserIcon className="w-4 h-4" />
+                                {paper.author_name || 'Unknown Author'}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-auto pt-4 border-t dark:border-gray-700">
+                              <button
+                                onClick={() => handleCreateFromPaper(paper, 'event')}
+                                className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-sm font-bold flex items-center justify-center gap-2"
+                              >
+                                <Calendar className="w-4 h-4" />
+                                Event
+                              </button>
+                              <button
+                                onClick={() => handleCreateFromPaper(paper, 'news')}
+                                className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-sm font-bold flex items-center justify-center gap-2"
+                              >
+                                <Newspaper className="w-4 h-4" />
+                                News
+                              </button>
                             </div>
                           </div>
-                          <div className="flex gap-2 mt-auto pt-4 border-t dark:border-gray-700">
-                            <button
-                              onClick={() => handleCreateFromPaper(paper, 'event')}
-                              className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-sm font-bold flex items-center justify-center gap-2"
-                            >
-                              <Calendar className="w-4 h-4" />
-                              Event
-                            </button>
-                            <button
-                              onClick={() => handleCreateFromPaper(paper, 'news')}
-                              className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-sm font-bold flex items-center justify-center gap-2"
-                            >
-                              <Newspaper className="w-4 h-4" />
-                              News
-                            </button>
-                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Event Modal */}
-        {showEventForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">
-                  {editingEvent ? 'Edit Event' : 'Create New Event'}
-                </h2>
-                <button onClick={cancelForm} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="p-6">
-                <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
-                  <div>
-                    <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Event Title
-                    </label>
-                    <input
-                      id="eventTitle"
-                      type="text"
-                      value={newEvent.title}
-                      onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                      placeholder="Enter event title"
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="eventCategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Category
-                    </label>
-                    <select
-                      id="eventCategory"
-                      value={newEvent.category}
-                      onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    >
-                      <option value="Conference">Conference</option>
-                      <option value="Workshop">Workshop</option>
-                      <option value="Seminar">Seminar</option>
-                      <option value="Thesis Defense">Thesis Defense</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Date & Time
-                    </label>
-                    <input
-                      id="eventDate"
-                      type="datetime-local"
-                      value={newEvent.date}
-                      onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="eventLocation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Location
-                    </label>
-                    <input
-                      id="eventLocation"
-                      type="text"
-                      value={newEvent.location}
-                      onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                      placeholder="Enter event location"
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="eventDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      id="eventDescription"
-                      value={newEvent.description}
-                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                      placeholder="Enter event description"
-                      rows={4}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {
+          showEventForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-red-600">
+                    {editingEvent ? 'Edit Event' : 'Create New Event'}
+                  </h2>
+                  <button onClick={cancelForm} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="p-6">
+                  <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
                     <div>
-                      <label htmlFor="eventImage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Image URL
+                      <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Event Title
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          id="eventImage"
-                          type="url"
-                          value={newEvent.image_url}
-                          onChange={(e) => setNewEvent({ ...newEvent, image_url: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        />
-                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
-                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image', 'event')} disabled={uploading} />
-                        </label>
-                      </div>
+                      <input
+                        id="eventTitle"
+                        type="text"
+                        value={newEvent.title}
+                        onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                        placeholder="Enter event title"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        required
+                      />
                     </div>
                     <div>
-                      <label htmlFor="eventVideo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Video URL
+                      <label htmlFor="eventCategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Category
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          id="eventVideo"
-                          type="url"
-                          value={newEvent.video_url}
-                          onChange={(e) => setNewEvent({ ...newEvent, video_url: e.target.value })}
-                          placeholder="https://example.com/video.mp4"
-                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        />
-                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
-                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <input type="file" className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video', 'event')} disabled={uploading} />
+                      <select
+                        id="eventCategory"
+                        value={newEvent.category}
+                        onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="Conference">Conference</option>
+                        <option value="Workshop">Workshop</option>
+                        <option value="Seminar">Seminar</option>
+                        <option value="Thesis Defense">Thesis Defense</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Date & Time
+                      </label>
+                      <input
+                        id="eventDate"
+                        type="datetime-local"
+                        value={newEvent.date}
+                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="eventLocation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Location
+                      </label>
+                      <input
+                        id="eventLocation"
+                        type="text"
+                        value={newEvent.location}
+                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                        placeholder="Enter event location"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="eventDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        id="eventDescription"
+                        value={newEvent.description}
+                        onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                        placeholder="Enter event description"
+                        rows={4}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="eventImage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Image URL
                         </label>
+                        <div className="flex gap-2">
+                          <input
+                            id="eventImage"
+                            type="url"
+                            value={newEvent.image_url}
+                            onChange={(e) => setNewEvent({ ...newEvent, image_url: e.target.value })}
+                            placeholder="https://example.com/image.jpg"
+                            className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          />
+                          <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image', 'event')} disabled={uploading} />
+                          </label>
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="eventVideo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Video URL
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            id="eventVideo"
+                            type="url"
+                            value={newEvent.video_url}
+                            onChange={(e) => setNewEvent({ ...newEvent, video_url: e.target.value })}
+                            placeholder="https://example.com/video.mp4"
+                            className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          />
+                          <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <input type="file" className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video', 'event')} disabled={uploading} />
+                          </label>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {uploading && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      Uploading file...
+                    {uploading && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        Uploading file...
+                      </div>
+                    )}
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <button
+                        type="button"
+                        onClick={cancelForm}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        {editingEvent ? 'Update Event' : 'Create Event'}
+                      </button>
                     </div>
-                  )}
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <button
-                      type="button"
-                      onClick={cancelForm}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      {editingEvent ? 'Update Event' : 'Create Event'}
-                    </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* News Modal */}
-        {showNewsForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">
-                  {editingNews ? 'Edit News Post' : 'Create News Post'}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowNewsForm(false)
-                    setEditingNews(null)
-                    setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
-                  }}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="p-6">
-                <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Title
-                    </label>
-                    <input
-                      type="text"
-                      value={newsForm.title}
-                      onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Category
-                    </label>
-                    <select
-                      value={newsForm.category}
-                      onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    >
-                      <option value="Research">Research</option>
-                      <option value="Academic">Academic</option>
-                      <option value="Event">Event</option>
-                      <option value="General">General</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Summary
-                    </label>
-                    <textarea
-                      value={newsForm.summary}
-                      onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
-                      rows={3}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Content
-                    </label>
-                    <textarea
-                      value={newsForm.content}
-                      onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
-                      rows={6}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {
+          showNewsForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-red-600">
+                    {editingNews ? 'Edit News Post' : 'Create News Post'}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowNewsForm(false)
+                      setEditingNews(null)
+                      setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
+                    }}
+                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="p-6">
+                  <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Image URL
+                        Title
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          value={newsForm.image_url}
-                          onChange={(e) => setNewsForm({ ...newsForm, image_url: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        />
-                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
-                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image', 'news')} disabled={uploading} />
-                        </label>
-                      </div>
+                      <input
+                        type="text"
+                        value={newsForm.title}
+                        onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        required
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Video URL
+                        Category
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          value={newsForm.video_url}
-                          onChange={(e) => setNewsForm({ ...newsForm, video_url: e.target.value })}
-                          placeholder="https://example.com/video.mp4"
-                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        />
-                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
-                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <input type="file" className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video', 'news')} disabled={uploading} />
+                      <select
+                        value={newsForm.category}
+                        onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="Research">Research</option>
+                        <option value="Academic">Academic</option>
+                        <option value="Event">Event</option>
+                        <option value="General">General</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Summary
+                      </label>
+                      <textarea
+                        value={newsForm.summary}
+                        onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
+                        rows={3}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Content
+                      </label>
+                      <textarea
+                        value={newsForm.content}
+                        onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
+                        rows={6}
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Image URL
                         </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={newsForm.image_url}
+                            onChange={(e) => setNewsForm({ ...newsForm, image_url: e.target.value })}
+                            placeholder="https://example.com/image.jpg"
+                            className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          />
+                          <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image', 'news')} disabled={uploading} />
+                          </label>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Video URL
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={newsForm.video_url}
+                            onChange={(e) => setNewsForm({ ...newsForm, video_url: e.target.value })}
+                            placeholder="https://example.com/video.mp4"
+                            className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          />
+                          <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <input type="file" className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video', 'news')} disabled={uploading} />
+                          </label>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {uploading && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      Uploading file...
+                    {uploading && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        Uploading file...
+                      </div>
+                    )}
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewsForm(false)
+                          setEditingNews(null)
+                          setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
+                        }}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        {editingNews ? 'Update News' : 'Create News'}
+                      </button>
                     </div>
-                  )}
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowNewsForm(false)
-                        setEditingNews(null)
-                        setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
-                      }}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      {editingNews ? 'Update News' : 'Create News'}
-                    </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
         {/* Likes Modal */}
-        {showLikesModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-red-500 fill-current" />
-                  Liked by
-                </h3>
-                <button onClick={() => setShowLikesModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-4 max-h-96 overflow-y-auto custom-scrollbar">
-                {loadingLikes ? (
-                  <div className="flex justify-center py-8">
-                    <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                ) : likesList.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No likes yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {likesList.map((like) => (
-                      <div key={like.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-all">
-                        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold">
-                          {like.user_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-900 dark:text-white">{like.user_name}</p>
-                          <p className="text-xs text-gray-400">{new Date(like.created_at).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Comments Modal */}
-        {activeCommentsPost && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5 text-red-500" />
-                  Comments
-                </h3>
-                <button onClick={() => setActiveCommentsPost(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-6 flex flex-col h-[500px]">
-                <div className="flex-1 overflow-y-auto mb-4 space-y-4 custom-scrollbar pr-2">
-                  {loadingComments ? (
+        {
+          showLikesModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                  <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-red-500 fill-current" />
+                    Liked by
+                  </h3>
+                  <button onClick={() => setShowLikesModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-4 max-h-96 overflow-y-auto custom-scrollbar">
+                  {loadingLikes ? (
                     <div className="flex justify-center py-8">
                       <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                  ) : commentsList.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8 italic">No comments yet. Be the first to comment!</p>
+                  ) : likesList.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No likes yet.</p>
                   ) : (
-                    commentsList.map((comment) => (
-                      <div key={comment.id} className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-xs flex-shrink-0">
-                          {comment.user_name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                        <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-2xl px-4 py-2">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-sm text-gray-900 dark:text-white">{comment.user_name}</span>
-                            <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleDateString()}</span>
+                    <div className="space-y-3">
+                      {likesList.map((like) => (
+                        <div key={like.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-all">
+                          <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold">
+                            {like.user_name?.charAt(0).toUpperCase() || '?'}
                           </div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{comment.content}</p>
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900 dark:text-white">{like.user_name}</p>
+                            <p className="text-xs text-gray-400">{new Date(like.created_at).toLocaleDateString()}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
-                <form onSubmit={handleAddComment} className="flex gap-2 pt-4 border-t dark:border-gray-700">
-                  <input
-                    type="text"
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Write a comment..."
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-500 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!commentText.trim()}
-                    className="p-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </form>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </div>
+          )
+        }
+
+        {/* Comments Modal */}
+        {
+          activeCommentsPost && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                  <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-red-500" />
+                    Comments
+                  </h3>
+                  <button onClick={() => setActiveCommentsPost(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-6 flex flex-col h-[500px]">
+                  <div className="flex-1 overflow-y-auto mb-4 space-y-4 custom-scrollbar pr-2">
+                    {loadingComments ? (
+                      <div className="flex justify-center py-8">
+                        <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : commentsList.length === 0 ? (
+                      <p className="text-center text-gray-500 py-8 italic">No comments yet. Be the first to comment!</p>
+                    ) : (
+                      commentsList.map((comment) => (
+                        <div key={comment.id} className="flex gap-3">
+                          <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-xs flex-shrink-0">
+                            {comment.user_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-2xl px-4 py-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-bold text-sm text-gray-900 dark:text-white">{comment.user_name}</span>
+                              <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <form onSubmit={handleAddComment} className="flex gap-2 pt-4 border-t dark:border-gray-700">
+                    <input
+                      type="text"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Write a comment..."
+                      className="flex-1 bg-gray-100 dark:bg-gray-700 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-500 dark:text-white"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!commentText.trim()}
+                      className="p-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )
+        }
+      </div >
+    </div >
   )
 }

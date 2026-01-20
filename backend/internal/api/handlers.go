@@ -636,27 +636,27 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 	// If admin is publishing, approving or rejecting a recommended paper, notify the editor and author
 	if req.Status == "published" || req.Status == "rejected" || req.Status == "approved" {
 		go func() {
-			// Find the editor who reviewed this paper
-			var editorID uuid.UUID
-			err := s.db.Pool.QueryRow(context.Background(),
-				"SELECT reviewer_id FROM reviews WHERE paper_id = $1 LIMIT 1",
-				paper.ID).Scan(&editorID)
+			statusText := req.Status
 
-			statusText := "published"
-			if req.Status == "rejected" {
-				statusText = "rejected"
-			} else if req.Status == "approved" {
-				statusText = "approved"
-			}
-			message := fmt.Sprintf("Admin decision: Paper '%s' has been %s", paper.Title, statusText)
-
+			// Notify all reviewers (editors)
+			rows, err := s.db.Pool.Query(context.Background(),
+				"SELECT reviewer_id FROM reviews WHERE paper_id = $1",
+				paper.ID)
 			if err == nil {
-				s.db.Pool.Exec(context.Background(),
-					"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
-					editorID, message, paper.ID)
+				defer rows.Close()
+				for rows.Next() {
+					var reviewerID uuid.UUID
+					if err := rows.Scan(&reviewerID); err == nil {
+						message := fmt.Sprintf("Admin decision: Paper '%s' has been %s", paper.Title, statusText)
+						s.db.Pool.Exec(context.Background(),
+							"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
+							reviewerID, message, paper.ID)
+					}
+				}
 			}
 
 			// Also notify the author
+			message := fmt.Sprintf("Your paper '%s' has been %s", paper.Title, statusText)
 			s.db.Pool.Exec(context.Background(),
 				"INSERT INTO notifications (user_id, message, paper_id) VALUES ($1, $2, $3)",
 				paper.AuthorID, message, paper.ID)
@@ -1005,6 +1005,15 @@ func (s *Server) CreateReview(c *gin.Context) {
 		return
 	}
 
+	// Update paper status to 'under_review' after first review
+	_, err = s.db.Pool.Exec(ctx,
+		"UPDATE papers SET status = 'under_review', updated_at = NOW() WHERE id = $1 AND status = 'submitted'",
+		review.PaperID)
+	if err != nil {
+		// Log error but don't fail the request since review was created
+		fmt.Printf("Warning: Failed to update paper status: %v\n", err)
+	}
+
 	// Send notification to paper author
 	go func() {
 		// Get paper details to find author
@@ -1034,7 +1043,7 @@ func (s *Server) GetEvents(c *gin.Context) {
 	status := c.Query("status")
 
 	query := `
-		SELECT e.id, e.title, e.description, e.category, e.status, e.image_url, e.video_url, e.date, e.location, e.coordinator_id, e.created_at, e.updated_at,
+		SELECT e.id, e.title, e.description, e.category, e.status, COALESCE(e.image_url, ''), COALESCE(e.video_url, ''), e.date, e.location, e.coordinator_id, e.created_at, e.updated_at,
 			   c.name as coordinator_name, c.email as coordinator_email
 		FROM events e
 		LEFT JOIN users c ON e.coordinator_id = c.id
@@ -1084,7 +1093,7 @@ func (s *Server) PublishEvent(c *gin.Context) {
 		UPDATE events
 		SET status = 'published', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, title, description, category, status, image_url, video_url, date, location, coordinator_id, created_at, updated_at
+		RETURNING id, title, description, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), date, location, coordinator_id, created_at, updated_at
 	`
 
 	var event models.Event
@@ -1131,7 +1140,7 @@ func (s *Server) CreateEvent(c *gin.Context) {
 	query := `
 		INSERT INTO events (title, description, category, status, image_url, video_url, date, location, coordinator_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, title, description, category, status, image_url, video_url, date, location, coordinator_id, created_at, updated_at
+		RETURNING id, title, description, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), date, location, coordinator_id, created_at, updated_at
 	`
 
 	err = s.db.Pool.QueryRow(ctx, query, event.Title, event.Description, event.Category, event.Status, event.ImageURL, event.VideoURL, event.Date, event.Location, event.CoordinatorID).Scan(
@@ -1165,7 +1174,7 @@ func (s *Server) UpdateEvent(c *gin.Context) {
 		UPDATE events
 		SET title = $1, description = $2, category = $3, date = $4, location = $5, image_url = $6, video_url = $7, updated_at = NOW()
 		WHERE id = $8
-		RETURNING id, title, description, category, status, image_url, video_url, date, location, coordinator_id, created_at, updated_at
+		RETURNING id, title, description, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), date, location, coordinator_id, created_at, updated_at
 	`
 
 	var event models.Event

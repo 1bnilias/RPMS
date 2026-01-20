@@ -13,7 +13,7 @@ func (s *Server) GetNews(c *gin.Context) {
 	status := c.Query("status")
 
 	ctx := c.Request.Context()
-	query := `SELECT id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at FROM news`
+	query := `SELECT id, title, summary, content, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), editor_id, created_at, updated_at FROM news`
 
 	if status != "" {
 		query += ` WHERE status = $1`
@@ -82,7 +82,7 @@ func (s *Server) CreateNews(c *gin.Context) {
 	query := `
 		INSERT INTO news (title, summary, content, category, status, image_url, video_url, editor_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at
+		RETURNING id, title, summary, content, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), editor_id, created_at, updated_at
 	`
 
 	err = s.db.Pool.QueryRow(ctx, query, news.Title, news.Summary, news.Content, news.Category, news.Status, news.ImageURL, news.VideoURL, news.EditorID).Scan(
@@ -116,7 +116,7 @@ func (s *Server) UpdateNews(c *gin.Context) {
 		UPDATE news
 		SET title = $1, summary = $2, content = $3, category = $4, image_url = $5, video_url = $6, updated_at = NOW()
 		WHERE id = $7
-		RETURNING id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at
+		RETURNING id, title, summary, content, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), editor_id, created_at, updated_at
 	`
 
 	var news models.News
@@ -164,7 +164,7 @@ func (s *Server) PublishNews(c *gin.Context) {
 		UPDATE news
 		SET status = 'published', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at
+		RETURNING id, title, summary, content, category, status, COALESCE(image_url, ''), COALESCE(video_url, ''), editor_id, created_at, updated_at
 	`
 
 	var news models.News

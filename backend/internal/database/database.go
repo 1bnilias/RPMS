@@ -121,6 +121,7 @@ func RunMigrations(db *Database) error {
 		id SERIAL PRIMARY KEY,
 		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		message TEXT NOT NULL,
+		paper_id UUID REFERENCES papers(id) ON DELETE CASCADE,
 		is_read BOOLEAN DEFAULT FALSE,
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 	);`

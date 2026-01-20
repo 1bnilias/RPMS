@@ -24,12 +24,17 @@ type Review struct {
 
 type CreateReviewRequest struct {
 	PaperID          uuid.UUID `json:"paper_id" binding:"required"`
-	Rating           int       `json:"rating" binding:"required,min=1,max=5"`
-	ProblemStatement int       `json:"problem_statement" binding:"required,min=1,max=5"`
-	LiteratureReview int       `json:"literature_review" binding:"required,min=1,max=5"`
-	Methodology      int       `json:"methodology" binding:"required,min=1,max=5"`
-	Results          int       `json:"results" binding:"required,min=1,max=5"`
-	Conclusion       int       `json:"conclusion" binding:"required,min=1,max=5"`
+	ReviewerID       uuid.UUID `json:"reviewer_id"`
+	Rating           int       `json:"rating" binding:"required,min=0,max=100"`
+	ProblemStatement int       `json:"problem_statement" binding:"required,min=0,max=100"`
+	LiteratureReview int       `json:"literature_review" binding:"required,min=0,max=100"`
+	Methodology      int       `json:"methodology" binding:"required,min=0,max=100"`
+	Results          int       `json:"results" binding:"required,min=0,max=100"`
+	Conclusion       int       `json:"conclusion" binding:"required,min=0,max=100"`
+	Originality      int       `json:"originality" binding:"required,min=0,max=100"`
+	ClarityOrg       int       `json:"clarity_organization" binding:"required,min=0,max=100"`
+	Contribution     int       `json:"contribution_knowledge" binding:"required,min=0,max=100"`
+	TechnicalQuality int       `json:"technical_quality" binding:"required,min=0,max=100"`
 	Comments         string    `json:"comments"`
 	Recommendation   string    `json:"recommendation" binding:"required,oneof=accept minor_revision major_revision reject"`
 }

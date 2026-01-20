@@ -89,7 +89,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
   // Categorize papers by status
   const pendingPapers = papers.filter(paper =>
-    paper.status === 'submitted' || paper.status === 'under_review' || paper.status === 'recommended_for_publication'
+    paper.status === 'recommended_for_publication'
   )
   const approvedPapers = papers.filter(paper => paper.status === 'approved')
   const rejectedPapers = papers.filter(paper => paper.status === 'rejected')

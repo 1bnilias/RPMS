@@ -85,6 +85,8 @@ export default function UpcomingEvents() {
                             category={event.category}
                             date={event.date}
                             location={event.location}
+                            image_url={event.image_url}
+                            video_url={event.video_url}
                             created_at={event.created_at}
                             onShare={() => handleShare(event.id, event.title)}
                         />

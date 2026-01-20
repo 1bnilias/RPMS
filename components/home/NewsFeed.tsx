@@ -81,6 +81,8 @@ export default function NewsFeed() {
                             summary={item.summary}
                             content={item.content}
                             category={item.category}
+                            image_url={item.image_url}
+                            video_url={item.video_url}
                             created_at={item.created_at}
                             onShare={() => handleShare(item.id, item.title)}
                         />
