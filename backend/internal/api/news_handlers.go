@@ -13,7 +13,7 @@ func (s *Server) GetNews(c *gin.Context) {
 	status := c.Query("status")
 
 	ctx := c.Request.Context()
-	query := `SELECT id, title, summary, content, category, status, editor_id, created_at, updated_at FROM news`
+	query := `SELECT id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at FROM news`
 
 	if status != "" {
 		query += ` WHERE status = $1`
@@ -41,7 +41,7 @@ func (s *Server) GetNews(c *gin.Context) {
 		var news models.News
 		err := rows.Scan(
 			&news.ID, &news.Title, &news.Summary, &news.Content, &news.Category, &news.Status,
-			&news.EditorID, &news.CreatedAt, &news.UpdatedAt,
+			&news.ImageURL, &news.VideoURL, &news.EditorID, &news.CreatedAt, &news.UpdatedAt,
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan news"})
@@ -73,19 +73,21 @@ func (s *Server) CreateNews(c *gin.Context) {
 		Content:  req.Content,
 		Category: req.Category,
 		Status:   "draft",
+		ImageURL: req.ImageURL,
+		VideoURL: req.VideoURL,
 		EditorID: editorID,
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO news (title, summary, content, category, status, editor_id)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, summary, content, category, status, editor_id, created_at, updated_at
+		INSERT INTO news (title, summary, content, category, status, image_url, video_url, editor_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, news.Title, news.Summary, news.Content, news.Category, news.Status, news.EditorID).Scan(
+	err = s.db.Pool.QueryRow(ctx, query, news.Title, news.Summary, news.Content, news.Category, news.Status, news.ImageURL, news.VideoURL, news.EditorID).Scan(
 		&news.ID, &news.Title, &news.Summary, &news.Content, &news.Category, &news.Status,
-		&news.EditorID, &news.CreatedAt, &news.UpdatedAt,
+		&news.ImageURL, &news.VideoURL, &news.EditorID, &news.CreatedAt, &news.UpdatedAt,
 	)
 
 	if err != nil {
@@ -112,15 +114,15 @@ func (s *Server) UpdateNews(c *gin.Context) {
 	ctx := c.Request.Context()
 	query := `
 		UPDATE news
-		SET title = $1, summary = $2, content = $3, category = $4, updated_at = NOW()
-		WHERE id = $5
-		RETURNING id, title, summary, content, category, status, editor_id, created_at, updated_at
+		SET title = $1, summary = $2, content = $3, category = $4, image_url = $5, video_url = $6, updated_at = NOW()
+		WHERE id = $7
+		RETURNING id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at
 	`
 
 	var news models.News
-	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Summary, req.Content, req.Category, newsID).Scan(
+	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Summary, req.Content, req.Category, req.ImageURL, req.VideoURL, newsID).Scan(
 		&news.ID, &news.Title, &news.Summary, &news.Content, &news.Category, &news.Status,
-		&news.EditorID, &news.CreatedAt, &news.UpdatedAt,
+		&news.ImageURL, &news.VideoURL, &news.EditorID, &news.CreatedAt, &news.UpdatedAt,
 	)
 
 	if err != nil {
@@ -162,13 +164,13 @@ func (s *Server) PublishNews(c *gin.Context) {
 		UPDATE news
 		SET status = 'published', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, title, summary, content, category, status, editor_id, created_at, updated_at
+		RETURNING id, title, summary, content, category, status, image_url, video_url, editor_id, created_at, updated_at
 	`
 
 	var news models.News
 	err = s.db.Pool.QueryRow(ctx, query, newsID).Scan(
 		&news.ID, &news.Title, &news.Summary, &news.Content, &news.Category, &news.Status,
-		&news.EditorID, &news.CreatedAt, &news.UpdatedAt,
+		&news.ImageURL, &news.VideoURL, &news.EditorID, &news.CreatedAt, &news.UpdatedAt,
 	)
 
 	if err != nil {

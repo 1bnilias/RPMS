@@ -548,23 +548,25 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
             </div>
 
             {/* Feedback for Author Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-blue-100 dark:border-blue-900/30 overflow-hidden">
+              <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30">
+                <h2 className="text-xl font-bold text-blue-700 dark:text-blue-400 flex items-center">
+                  <MessageSquare className="w-6 h-6 mr-2" />
                   Send Feedback to Author
                 </h2>
+                <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">Direct communication with the principal investigator</p>
               </div>
               <div className="p-6">
-                <form onSubmit={sendFeedbackToAuthor} className="space-y-4">
+                <form onSubmit={sendFeedbackToAuthor} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                      <FileText className="w-4 h-4 mr-2 text-blue-500" />
                       Select Paper
                     </label>
                     <select
                       value={feedbackForm.paperId}
                       onChange={(e) => setFeedbackForm({ ...feedbackForm, paperId: e.target.value })}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       required
                     >
                       <option value="">Choose a paper...</option>
@@ -576,23 +578,24 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                      <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
                       Feedback Message
                     </label>
                     <textarea
                       value={feedbackForm.message}
                       onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
                       rows={4}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
-                      placeholder="Enter your feedback for the author..."
+                      className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+                      placeholder="Enter your detailed feedback for the author..."
                       required
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-blue-100 text-blue-800 px-4 py-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center border border-blue-200"
+                    className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center font-bold shadow-md hover:shadow-lg active:scale-[0.98]"
                   >
-                    <Send className="w-4 h-4 mr-2" />
+                    <Send className="w-5 h-5 mr-2" />
                     Send Feedback
                   </button>
                 </form>
@@ -600,23 +603,25 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
             </div>
 
             {/* Contact Admin Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-6 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                  <MessageSquare className="w-6 h-6 mr-2 text-red-600" />
                   Contact Admin
                 </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Escalate issues or ask for clarification</p>
               </div>
               <div className="p-6">
-                <form onSubmit={contactAdmin} className="space-y-4">
+                <form onSubmit={contactAdmin} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                      <FileText className="w-4 h-4 mr-2 text-red-500" />
                       Select Paper (Optional)
                     </label>
                     <select
                       value={adminContactForm.paperId}
                       onChange={(e) => setAdminContactForm({ ...adminContactForm, paperId: e.target.value })}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 dark:text-white rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                     >
                       <option value="">General message (no specific paper)</option>
                       {papers.map(paper => (
@@ -627,23 +632,24 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                      <MessageSquare className="w-4 h-4 mr-2 text-red-500" />
                       Message to Admin
                     </label>
                     <textarea
                       value={adminContactForm.message}
                       onChange={(e) => setAdminContactForm({ ...adminContactForm, message: e.target.value })}
                       rows={4}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 dark:text-white rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
                       placeholder="Enter your message to the admin..."
                       required
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center border border-gray-200"
+                    className="w-full bg-gray-800 dark:bg-gray-700 text-white px-6 py-3 rounded-xl hover:bg-gray-900 dark:hover:bg-gray-600 transition-all flex items-center justify-center font-bold shadow-md hover:shadow-lg active:scale-[0.98]"
                   >
-                    <Send className="w-4 h-4 mr-2" />
+                    <Send className="w-5 h-5 mr-2" />
                     Send to Admin
                   </button>
                 </form>

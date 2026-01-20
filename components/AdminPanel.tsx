@@ -95,8 +95,12 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const rejectedPapers = papers.filter(paper => paper.status === 'rejected')
 
   const handlePublicationDecision = async (paperId: string, status: 'approved' | 'rejected' | 'published') => {
+    const paper = papers.find(p => p.id === paperId)
+    if (!paper) return
+
     try {
       const result = await updatePaper(paperId, {
+        ...paper,
         status: status
       })
 
@@ -205,7 +209,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       <Header user={user} title="Admin Panel" onLogout={onLogout} />
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b dark:border-gray-700">
@@ -370,25 +374,27 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             )}
           </div>
 
-          <div className="lg:col-span-2 space-y-6 sticky top-6">
+          <div className="lg:col-span-1 space-y-6 sticky top-6">
             {/* Contact Editor Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-6 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                  <MessageSquare className="w-6 h-6 mr-2 text-red-600" />
                   Contact Editor
                 </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Send instructions or feedback to reviewers</p>
               </div>
               <div className="p-6">
-                <form onSubmit={contactEditor} className="space-y-4">
+                <form onSubmit={contactEditor} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                      <FileText className="w-4 h-4 mr-2 text-red-500" />
                       Select Paper (Required)
                     </label>
                     <select
                       value={editorContactForm.paperId}
                       onChange={(e) => setEditorContactForm({ ...editorContactForm, paperId: e.target.value })}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 dark:text-white rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                       required
                     >
                       <option value="">Choose a paper...</option>
@@ -398,28 +404,29 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic">
                       Message will be sent to the editor who reviewed this paper
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                      <MessageSquare className="w-4 h-4 mr-2 text-red-500" />
                       Message to Editor
                     </label>
                     <textarea
                       value={editorContactForm.message}
                       onChange={(e) => setEditorContactForm({ ...editorContactForm, message: e.target.value })}
                       rows={4}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+                      className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 dark:text-white rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
                       placeholder="Enter your message to the editor..."
                       required
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center"
+                    className="w-full bg-gray-800 dark:bg-gray-700 text-white px-6 py-3 rounded-xl hover:bg-gray-900 dark:hover:bg-gray-600 transition-all flex items-center justify-center font-bold shadow-md hover:shadow-lg active:scale-[0.98]"
                   >
-                    <Send className="w-4 h-4 mr-2" />
+                    <Send className="w-5 h-5 mr-2" />
                     Send to Editor
                   </button>
                 </form>

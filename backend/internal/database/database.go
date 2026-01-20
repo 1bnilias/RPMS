@@ -318,6 +318,18 @@ func RunMigrations(db *Database) error {
 		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS conclusion INTEGER DEFAULT 0;
 	`
 
+	// Add image and video columns to news
+	addMediaToNews := `
+		ALTER TABLE news ADD COLUMN IF NOT EXISTS image_url TEXT;
+		ALTER TABLE news ADD COLUMN IF NOT EXISTS video_url TEXT;
+	`
+
+	// Add image and video columns to events
+	addMediaToEvents := `
+		ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT;
+		ALTER TABLE events ADD COLUMN IF NOT EXISTS video_url TEXT;
+	`
+
 	migrations := []string{
 		createUsersTable,
 		createPapersTable,
@@ -349,6 +361,8 @@ func RunMigrations(db *Database) error {
 		createSharesTable,
 		createInteractionIndexes,
 		addReviewRatingColumns,
+		addMediaToNews,
+		addMediaToEvents,
 	}
 
 	for _, migration := range migrations {

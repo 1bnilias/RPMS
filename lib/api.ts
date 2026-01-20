@@ -101,6 +101,8 @@ export interface Event {
     description?: string
     category?: string
     status?: string
+    image_url?: string
+    video_url?: string
     date: string
     location?: string
     coordinator_id?: string
@@ -115,6 +117,8 @@ export interface News {
     content: string
     category: string
     status: string
+    image_url?: string
+    video_url?: string
     editor_id: string
     created_at: string
     updated_at: string
@@ -500,6 +504,10 @@ export async function likePost(postType: 'news' | 'event', postId: string) {
         method: 'POST',
         body: JSON.stringify({ post_type: postType, post_id: postId })
     })
+}
+
+export async function getPostLikes(postType: 'news' | 'event', postId: string) {
+    return request<{ likes: any[]; count: number }>(`/interactions/likes/${postType}/${postId}`)
 }
 
 export async function addComment(postType: 'news' | 'event', postId: string, content: string) {

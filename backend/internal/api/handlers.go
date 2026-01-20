@@ -633,8 +633,8 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 		return
 	}
 
-	// If admin is publishing or rejecting a recommended paper, notify the editor and author
-	if req.Status == "published" || req.Status == "rejected" {
+	// If admin is publishing, approving or rejecting a recommended paper, notify the editor and author
+	if req.Status == "published" || req.Status == "rejected" || req.Status == "approved" {
 		go func() {
 			// Find the editor who reviewed this paper
 			var editorID uuid.UUID
@@ -645,6 +645,8 @@ func (s *Server) UpdatePaper(c *gin.Context) {
 			statusText := "published"
 			if req.Status == "rejected" {
 				statusText = "rejected"
+			} else if req.Status == "approved" {
+				statusText = "approved"
 			}
 			message := fmt.Sprintf("Admin decision: Paper '%s' has been %s", paper.Title, statusText)
 
@@ -1032,7 +1034,7 @@ func (s *Server) GetEvents(c *gin.Context) {
 	status := c.Query("status")
 
 	query := `
-		SELECT e.id, e.title, e.description, e.category, e.status, e.date, e.location, e.coordinator_id, e.created_at, e.updated_at,
+		SELECT e.id, e.title, e.description, e.category, e.status, e.image_url, e.video_url, e.date, e.location, e.coordinator_id, e.created_at, e.updated_at,
 			   c.name as coordinator_name, c.email as coordinator_email
 		FROM events e
 		LEFT JOIN users c ON e.coordinator_id = c.id
@@ -1057,7 +1059,7 @@ func (s *Server) GetEvents(c *gin.Context) {
 	for rows.Next() {
 		var event models.EventWithCoordinator
 		err := rows.Scan(
-			&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location, &event.CoordinatorID,
+			&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.ImageURL, &event.VideoURL, &event.Date, &event.Location, &event.CoordinatorID,
 			&event.CreatedAt, &event.UpdatedAt, &event.CoordinatorName, &event.CoordinatorEmail,
 		)
 		if err != nil {
@@ -1082,12 +1084,12 @@ func (s *Server) PublishEvent(c *gin.Context) {
 		UPDATE events
 		SET status = 'published', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, title, description, category, status, date, location, coordinator_id, created_at, updated_at
+		RETURNING id, title, description, category, status, image_url, video_url, date, location, coordinator_id, created_at, updated_at
 	`
 
 	var event models.Event
 	err = s.db.Pool.QueryRow(ctx, query, eventID).Scan(
-		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location,
+		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.ImageURL, &event.VideoURL, &event.Date, &event.Location,
 		&event.CoordinatorID, &event.CreatedAt, &event.UpdatedAt,
 	)
 
@@ -1118,6 +1120,8 @@ func (s *Server) CreateEvent(c *gin.Context) {
 		Description:   req.Description,
 		Category:      req.Category,
 		Status:        "draft",
+		ImageURL:      req.ImageURL,
+		VideoURL:      req.VideoURL,
 		Date:          req.Date,
 		Location:      req.Location,
 		CoordinatorID: coordinatorID,
@@ -1125,13 +1129,13 @@ func (s *Server) CreateEvent(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO events (title, description, category, status, date, location, coordinator_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, title, description, category, status, date, location, coordinator_id, created_at, updated_at
+		INSERT INTO events (title, description, category, status, image_url, video_url, date, location, coordinator_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, title, description, category, status, image_url, video_url, date, location, coordinator_id, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, event.Title, event.Description, event.Category, event.Status, event.Date, event.Location, event.CoordinatorID).Scan(
-		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location,
+	err = s.db.Pool.QueryRow(ctx, query, event.Title, event.Description, event.Category, event.Status, event.ImageURL, event.VideoURL, event.Date, event.Location, event.CoordinatorID).Scan(
+		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.ImageURL, &event.VideoURL, &event.Date, &event.Location,
 		&event.CoordinatorID, &event.CreatedAt, &event.UpdatedAt,
 	)
 
@@ -1159,14 +1163,14 @@ func (s *Server) UpdateEvent(c *gin.Context) {
 	ctx := c.Request.Context()
 	query := `
 		UPDATE events
-		SET title = $1, description = $2, category = $3, date = $4, location = $5, updated_at = NOW()
-		WHERE id = $6
-		RETURNING id, title, description, category, status, date, location, coordinator_id, created_at, updated_at
+		SET title = $1, description = $2, category = $3, date = $4, location = $5, image_url = $6, video_url = $7, updated_at = NOW()
+		WHERE id = $8
+		RETURNING id, title, description, category, status, image_url, video_url, date, location, coordinator_id, created_at, updated_at
 	`
 
 	var event models.Event
-	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Description, req.Category, req.Date, req.Location, eventID).Scan(
-		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.Date, &event.Location,
+	err = s.db.Pool.QueryRow(ctx, query, req.Title, req.Description, req.Category, req.Date, req.Location, req.ImageURL, req.VideoURL, eventID).Scan(
+		&event.ID, &event.Title, &event.Description, &event.Category, &event.Status, &event.ImageURL, &event.VideoURL, &event.Date, &event.Location,
 		&event.CoordinatorID, &event.CreatedAt, &event.UpdatedAt,
 	)
 

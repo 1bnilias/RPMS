@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, FileText, Edit, X, Newspaper, Plus, CheckCircle, Clock, AlertCircle, TrendingUp } from 'lucide-react'
-import { User, Event, Paper, News, getEvents, createEvent, updateEvent, deleteEvent, publishEvent, getPapers, updatePaperDetails, getNews, createNews, updateNews, deleteNews, publishNews } from '@/lib/api'
+import { Calendar, Clock, Newspaper, Plus, Search, Trash2, X, Edit2, CheckCircle, AlertCircle, TrendingUp, FileText, User as UserIcon, Mail, ThumbsUp, MessageCircle, Share2, Upload, Play, Heart } from 'lucide-react'
+import { User, Event, Paper, News, getEvents, createEvent, updateEvent, deleteEvent, publishEvent, getPapers, updatePaperDetails, getNews, createNews, updateNews, deleteNews, publishNews, getEngagementStats, likePost, addComment, getComments, getPostLikes, uploadFile, EngagementStats, Comment } from '@/lib/api'
 import Header from './Header'
 
 interface CoordinatorDashboardProps {
@@ -15,7 +15,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   const [papers, setPapers] = useState<Paper[]>([])
   const [showEventForm, setShowEventForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'Other', date: '', location: '' })
+  const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'Other', date: '', location: '', image_url: '', video_url: '' })
 
   // News state
   const [news, setNews] = useState<News[]>([])
@@ -25,15 +25,43 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
     title: '',
     summary: '',
     content: '',
-    category: 'Research'
+    category: 'Research',
+    image_url: '',
+    video_url: ''
   })
 
   const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
   const [showAuthorModal, setShowAuthorModal] = useState(false)
+  const [showPromotionModal, setShowPromotionModal] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [showLikesModal, setShowLikesModal] = useState(false)
+  const [likesList, setLikesList] = useState<any[]>([])
+  const [loadingLikes, setLoadingLikes] = useState(false)
+  const [activeCommentsPost, setActiveCommentsPost] = useState<{ type: 'news' | 'event', id: string } | null>(null)
+  const [commentsList, setCommentsList] = useState<Comment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [engagementData, setEngagementData] = useState<Record<string, EngagementStats>>({})
 
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('All')
+
+  const fetchEngagementData = useCallback(async () => {
+    const allPosts = [
+      ...events.map(e => ({ id: e.id, type: 'event' as const })),
+      ...news.map(n => ({ id: n.id, type: 'news' as const }))
+    ]
+
+    const stats: Record<string, EngagementStats> = {}
+    await Promise.all(allPosts.map(async post => {
+      const result = await getEngagementStats(post.type, post.id)
+      if (result.success && result.data) {
+        stats[`${post.type}-${post.id}`] = result.data
+      }
+    }))
+    setEngagementData(stats)
+  }, [events, news])
 
   const fetchData = useCallback(async () => {
     try {
@@ -51,9 +79,8 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       }
 
       if (papersResult.success && papersResult.data) {
-        // Filter to show only approved papers
         const approvedPapers = papersResult.data.filter((paper: Paper) =>
-          paper.status === 'approved'
+          paper.status === 'approved' || paper.status === 'published'
         )
         setPapers(approvedPapers)
       }
@@ -72,6 +99,12 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  useEffect(() => {
+    if (events.length > 0 || news.length > 0) {
+      fetchEngagementData()
+    }
+  }, [events.length, news.length, fetchEngagementData])
 
   // Handle hash navigation for deep linking
   useEffect(() => {
@@ -113,13 +146,15 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           category: newEvent.category,
           date: dateObj.toISOString(),
           location: newEvent.location,
+          image_url: newEvent.image_url,
+          video_url: newEvent.video_url,
           coordinator_id: user.id
         }
 
         const result = await createEvent(eventData)
         if (result.success && result.data) {
           setEvents([result.data, ...events])
-          setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '' })
+          setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '', image_url: '', video_url: '' })
           setShowEventForm(false)
         }
       } catch (error) {
@@ -143,7 +178,9 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           description: newEvent.description,
           category: newEvent.category,
           date: dateObj.toISOString(),
-          location: newEvent.location
+          location: newEvent.location,
+          image_url: newEvent.image_url,
+          video_url: newEvent.video_url
         })
 
         if (result.success && result.data) {
@@ -151,7 +188,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
             event.id === editingEvent.id ? result.data! : event
           ))
           setEditingEvent(null)
-          setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '' })
+          setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '', image_url: '', video_url: '' })
           setShowEventForm(false)
         }
       } catch (error) {
@@ -186,14 +223,100 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
     }
   }
 
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video', target: 'event' | 'news') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const result = await uploadFile(file)
+      if (result.success && result.data) {
+        if (target === 'event') {
+          setNewEvent({ ...newEvent, [type === 'image' ? 'image_url' : 'video_url']: result.data.url })
+        } else {
+          setNewsForm({ ...newsForm, [type === 'image' ? 'image_url' : 'video_url']: result.data.url })
+        }
+      } else {
+        alert('Upload failed: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('An error occurred during upload')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleShowLikes = async (type: 'news' | 'event', id: string) => {
+    setLoadingLikes(true)
+    setShowLikesModal(true)
+    try {
+      const result = await getPostLikes(type, id)
+      if (result.success && result.data) {
+        setLikesList(result.data.likes || [])
+      }
+    } catch (error) {
+      console.error('Failed to load likes:', error)
+    } finally {
+      setLoadingLikes(false)
+    }
+  }
+
+  const handleShowComments = async (type: 'news' | 'event', id: string) => {
+    setLoadingComments(true)
+    setActiveCommentsPost({ type, id })
+    setShowPromotionModal(false) // Close promotion modal if open
+    try {
+      const result = await getComments(type, id)
+      if (result.success && result.data) {
+        setCommentsList(result.data.comments || [])
+      }
+    } catch (error) {
+      console.error('Failed to load comments:', error)
+    } finally {
+      setLoadingComments(false)
+    }
+  }
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!commentText.trim() || !activeCommentsPost) return
+
+    try {
+      const result = await addComment(activeCommentsPost.type, activeCommentsPost.id, commentText)
+      if (result.success && result.data) {
+        setCommentsList([result.data.comment, ...commentsList])
+        setCommentText('')
+        fetchEngagementData()
+      }
+    } catch (error) {
+      console.error('Failed to add comment:', error)
+    }
+  }
+
+  const handleLike = async (type: 'news' | 'event', id: string) => {
+    try {
+      const result = await likePost(type, id)
+      if (result.success) {
+        fetchEngagementData()
+      }
+    } catch (error) {
+      console.error('Failed to like:', error)
+    }
+  }
+
   const handleCreateFromPaper = (paper: Paper, type: 'event' | 'news') => {
+    setShowPromotionModal(false)
     if (type === 'event') {
       setNewEvent({
         title: paper.title,
         description: paper.abstract || '',
         category: 'Conference',
         date: '',
-        location: ''
+        location: '',
+        image_url: '',
+        video_url: ''
       })
       setShowEventForm(true)
     } else {
@@ -201,7 +324,9 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         title: paper.title,
         summary: paper.abstract ? paper.abstract.substring(0, 150) + '...' : '',
         content: paper.abstract || '',
-        category: 'Research'
+        category: 'Research',
+        image_url: '',
+        video_url: ''
       })
       setShowNewsForm(true)
     }
@@ -216,7 +341,9 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       description: event.description || '',
       category: event.category || 'Other',
       date: dateStr,
-      location: event.location || ''
+      location: event.location || '',
+      image_url: event.image_url || '',
+      video_url: event.video_url || ''
     })
     setShowEventForm(true)
   }
@@ -224,7 +351,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   const cancelForm = () => {
     setShowEventForm(false)
     setEditingEvent(null)
-    setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '' })
+    setNewEvent({ title: '', description: '', category: 'Other', date: '', location: '', image_url: '', video_url: '' })
   }
 
   const getEventStatus = (eventDate: string) => {
@@ -258,10 +385,12 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
   const handleCreateNews = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const result = await createNews(newsForm)
+      const result = await createNews({
+        ...newsForm
+      })
       if (result.success && result.data) {
         setNews([result.data, ...news])
-        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+        setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
         setShowNewsForm(false)
       }
     } catch (error) {
@@ -278,7 +407,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       if (result.success && result.data) {
         setNews(news.map(n => n.id === editingNews.id ? result.data! : n))
         setEditingNews(null)
-        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+        setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
         setShowNewsForm(false)
       }
     } catch (error) {
@@ -316,7 +445,9 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       title: newsItem.title,
       summary: newsItem.summary,
       content: newsItem.content,
-      category: newsItem.category
+      category: newsItem.category,
+      image_url: newsItem.image_url || '',
+      video_url: newsItem.video_url || ''
     })
     setShowNewsForm(true)
   }
@@ -340,7 +471,14 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-6 border-b dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
             <h2 className="text-xl font-semibold text-red-600">Events</h2>
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <button
+                onClick={() => setShowPromotionModal(true)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors whitespace-nowrap flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Papers for Promotion ({papers.length})
+              </button>
               <input
                 type="text"
                 placeholder="Search events..."
@@ -434,66 +572,111 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                   .map(event => {
                     const status = getEventStatus(event.date)
                     return (
-                      <div key={event.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all duration-200 flex flex-col h-full">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1 min-w-0 mr-2">
-                            <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{event.title}</h3>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              <span className="text-[10px] font-semibold tracking-wide uppercase text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-md">
-                                {event.category || 'Other'}
-                              </span>
-                              <span className={`text-[10px] font-semibold tracking-wide uppercase px-2 py-1 rounded-md ${event.status === 'published'
-                                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
-                                }`}>
-                                {event.status === 'published' ? 'Published' : 'Draft'}
-                              </span>
+                      <div key={event.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1">
+                        {/* Media Header */}
+                        <div className="relative h-48 w-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                          {event.video_url ? (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={event.video_url}
+                                className="w-full h-full object-cover"
+                                controls
+                              />
                             </div>
+                          ) : event.image_url ? (
+                            <img
+                              src={event.image_url}
+                              alt={event.title}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <Calendar className="w-12 h-12 opacity-20" />
+                            </div>
+                          )}
+                          <div className="absolute top-3 right-3">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm ${getStatusColor(status)}`}>
+                              {status}
+                            </span>
                           </div>
-                          <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </span>
+                          <div className="absolute bottom-3 left-3">
+                            <span className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm text-red-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase shadow-sm">
+                              {event.category || 'Other'}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="space-y-3 mb-4 flex-grow">
-                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                            <Calendar className="w-4 h-4 mr-2.5 text-gray-400" />
-                            {formatDate(event.date)}
+                        <div className="p-5 flex-grow flex flex-col">
+                          <div className="flex justify-between items-start mb-3">
+                            <h3 className="font-bold text-xl text-gray-900 dark:text-white leading-tight group-hover:text-red-600 transition-colors line-clamp-2">
+                              {event.title}
+                            </h3>
                           </div>
-                          {event.location && (
+
+                          <div className="space-y-2 mb-4">
                             <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <span className="w-4 h-4 mr-2.5 flex items-center justify-center text-gray-400">📍</span>
-                              <span className="truncate">{event.location}</span>
+                              <Calendar className="w-4 h-4 mr-2 text-red-500" />
+                              <span className="font-medium">{formatDate(event.date)}</span>
                             </div>
-                          )}
-                          {event.description && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-2 leading-relaxed">
-                              {event.description}
-                            </p>
-                          )}
-                        </div>
+                            {event.location && (
+                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                <span className="w-4 h-4 mr-2 flex items-center justify-center text-red-500">📍</span>
+                                <span className="truncate">{event.location}</span>
+                              </div>
+                            )}
+                            {event.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mt-3 leading-relaxed italic">
+                                "{event.description}"
+                              </p>
+                            )}
+                          </div>
 
-                        <div className="flex items-center gap-2 pt-4 border-t dark:border-gray-700 mt-auto">
-                          {event.status !== 'published' && (
+                          {/* Social Interactions */}
+                          <div className="flex items-center justify-between py-3 border-t border-b dark:border-gray-700 mb-4">
                             <button
-                              onClick={() => handlePublishEvent(event.id)}
-                              className="flex-1 text-xs font-medium bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                              onClick={() => handleLike('event', event.id)}
+                              className={`flex items-center gap-1.5 transition-colors text-xs font-medium ${engagementData[`event-${event.id}`]?.user_liked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'}`}
                             >
-                              Publish
+                              <Heart className={`w-4 h-4 ${engagementData[`event-${event.id}`]?.user_liked ? 'fill-current' : ''}`} />
+                              <span onClick={(e) => { e.stopPropagation(); handleShowLikes('event', event.id); }} className="hover:underline">
+                                {engagementData[`event-${event.id}`]?.likes_count || 0}
+                              </span>
                             </button>
-                          )}
-                          <button
-                            onClick={() => startEditEvent(event)}
-                            className="flex-1 text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="flex-1 text-xs font-medium border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-                          >
-                            Delete
-                          </button>
+                            <button
+                              onClick={() => handleShowComments('event', event.id)}
+                              className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 transition-colors text-xs font-medium"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                              <span>{engagementData[`event-${event.id}`]?.comments_count || 0} Comments</span>
+                            </button>
+                            <div className="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
+                              <Share2 className="w-4 h-4" />
+                              <span>{engagementData[`event-${event.id}`]?.shares_count || 0}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-auto">
+                            {event.status !== 'published' && (
+                              <button
+                                onClick={() => handlePublishEvent(event.id)}
+                                className="flex-1 text-xs font-bold bg-green-600 text-white py-2.5 rounded-xl hover:bg-green-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                              >
+                                Publish
+                              </button>
+                            )}
+                            <button
+                              onClick={() => startEditEvent(event)}
+                              className="flex-1 text-xs font-bold border-2 border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="p-2.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95 border-2 border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )
@@ -529,55 +712,107 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {news.map(item => (
-                  <div key={item.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all duration-200 flex flex-col h-full">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1 min-w-0 mr-2">
-                        <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{item.title}</h3>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="text-[10px] font-semibold tracking-wide uppercase text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-md">
-                            {item.category || 'General'}
-                          </span>
-                          <span className={`text-[10px] font-semibold tracking-wide uppercase px-2 py-1 rounded-md ${item.status === 'published'
-                            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                            : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
-                            }`}>
-                            {item.status === 'published' ? 'Published' : 'Draft'}
-                          </span>
+                  <div key={item.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1">
+                    {/* Media Header */}
+                    <div className="relative h-48 w-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                      {item.video_url ? (
+                        <video
+                          src={item.video_url}
+                          className="w-full h-full object-cover"
+                          muted
+                          loop
+                          onMouseOver={(e) => e.currentTarget.play()}
+                          onMouseOut={(e) => e.currentTarget.pause()}
+                        />
+                      ) : item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <Newspaper className="w-12 h-12 opacity-20" />
                         </div>
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {new Date(item.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3 mb-4 flex-grow">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mt-2 leading-relaxed">
-                        {item.summary}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-4 border-t dark:border-gray-700 mt-auto">
-                      {item.status !== 'published' && (
-                        <button
-                          onClick={() => handlePublishNews(item.id)}
-                          className="flex-1 text-xs font-medium bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-                        >
-                          Publish
-                        </button>
                       )}
-                      <button
-                        onClick={() => handleEditNewsClick(item)}
-                        className="flex-1 text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteNews(item.id)}
-                        className="flex-1 text-xs font-medium border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-                      >
-                        Delete
-                      </button>
+                      <div className="absolute top-3 right-3">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm ${item.status === 'published'
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                          : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          }`}>
+                          {item.status === 'published' ? 'Published' : 'Draft'}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-3 left-3">
+                        <span className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm text-red-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase shadow-sm">
+                          {item.category || 'General'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-5 flex-grow flex flex-col">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-bold text-xl text-gray-900 dark:text-white leading-tight group-hover:text-red-600 transition-colors line-clamp-2">
+                          {item.title}
+                        </h3>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                          <Clock className="w-3 h-3 mr-1 text-red-500" />
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mt-2 leading-relaxed">
+                          {item.summary}
+                        </p>
+                      </div>
+
+                      {/* Social Interactions */}
+                      <div className="flex items-center justify-between py-3 border-t border-b dark:border-gray-700 mb-4">
+                        <button
+                          onClick={() => handleLike('news', item.id)}
+                          className={`flex items-center gap-1.5 transition-colors text-xs font-medium ${engagementData[`news-${item.id}`]?.user_liked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'}`}
+                        >
+                          <Heart className={`w-4 h-4 ${engagementData[`news-${item.id}`]?.user_liked ? 'fill-current' : ''}`} />
+                          <span onClick={(e) => { e.stopPropagation(); handleShowLikes('news', item.id); }} className="hover:underline">
+                            {engagementData[`news-${item.id}`]?.likes_count || 0}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleShowComments('news', item.id)}
+                          className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 transition-colors text-xs font-medium"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>{engagementData[`news-${item.id}`]?.comments_count || 0} Comments</span>
+                        </button>
+                        <div className="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
+                          <Share2 className="w-4 h-4" />
+                          <span>{engagementData[`news-${item.id}`]?.shares_count || 0}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-auto">
+                        {item.status !== 'published' && (
+                          <button
+                            onClick={() => handlePublishNews(item.id)}
+                            className="flex-1 text-xs font-bold bg-green-600 text-white py-2.5 rounded-xl hover:bg-green-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                          >
+                            Publish
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEditNewsClick(item)}
+                          className="flex-1 text-xs font-bold border-2 border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteNews(item.id)}
+                          className="p-2.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95 border-2 border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -586,68 +821,62 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
         </div>
 
-        {/* Papers Section - Create News/Event from Paper */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-6 border-b dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
-            <p className="text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
-          </div>
-          <div className="p-6">
-            {papers.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">No papers available</p>
+        {/* Promotion Modal */}
+        {showPromotionModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
+                  <p className="text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
+                </div>
+                <button onClick={() => setShowPromotionModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                  <X className="w-6 h-6" />
+                </button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {papers.map(paper => (
-                  <div key={paper.id} id={`paper-${paper.id}`} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div>
-                        <h3 className="font-semibold dark:text-white text-lg">{paper.title}</h3>
-                        <button
-                          onClick={() => {
-                            setSelectedAuthor(paper)
-                            setShowAuthorModal(true)
-                          }}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 hover:underline transition-colors text-left"
-                        >
-                          Author: {paper.author_name || 'Unknown'}
-                        </button>
-                        <div className="flex gap-2 mt-2">
-                          <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
-                            {paper.status.replace(/_/g, ' ')}
-                          </span>
-                          {paper.publication_id && (
-                            <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">
-                              ID: {paper.publication_id}
-                            </span>
-                          )}
+              <div className="p-6 overflow-y-auto">
+                {papers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400 text-lg">No papers available for promotion</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {papers.map(paper => (
+                      <div key={paper.id} className="border dark:border-gray-700 rounded-xl p-5 hover:border-red-500 transition-all bg-gray-50 dark:bg-gray-750">
+                        <div className="flex flex-col h-full">
+                          <div className="mb-4">
+                            <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 mb-2">{paper.title}</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                              <UserIcon className="w-4 h-4" />
+                              {paper.author_name || 'Unknown Author'}
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-auto pt-4 border-t dark:border-gray-700">
+                            <button
+                              onClick={() => handleCreateFromPaper(paper, 'event')}
+                              className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-sm font-bold flex items-center justify-center gap-2"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              Event
+                            </button>
+                            <button
+                              onClick={() => handleCreateFromPaper(paper, 'news')}
+                              className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-sm font-bold flex items-center justify-center gap-2"
+                            >
+                              <Newspaper className="w-4 h-4" />
+                              News
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2 w-full md:w-auto">
-                        <button
-                          onClick={() => handleCreateFromPaper(paper, 'event')}
-                          className="flex-1 md:flex-none bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center justify-center"
-                        >
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Create Event
-                        </button>
-                        <button
-                          onClick={() => handleCreateFromPaper(paper, 'news')}
-                          className="flex-1 md:flex-none bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm flex items-center justify-center"
-                        >
-                          <Newspaper className="w-4 h-4 mr-2" />
-                          Post News
-                        </button>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Event Modal */}
         {showEventForm && (
@@ -733,6 +962,52 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                       className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     />
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="eventImage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Image URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="eventImage"
+                          type="url"
+                          value={newEvent.image_url}
+                          onChange={(e) => setNewEvent({ ...newEvent, image_url: e.target.value })}
+                          placeholder="https://example.com/image.jpg"
+                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        />
+                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image', 'event')} disabled={uploading} />
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="eventVideo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Video URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="eventVideo"
+                          type="url"
+                          value={newEvent.video_url}
+                          onChange={(e) => setNewEvent({ ...newEvent, video_url: e.target.value })}
+                          placeholder="https://example.com/video.mp4"
+                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        />
+                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <input type="file" className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video', 'event')} disabled={uploading} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  {uploading && (
+                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      Uploading file...
+                    </div>
+                  )}
                   <div className="flex justify-end space-x-2 pt-4">
                     <button
                       type="button"
@@ -766,7 +1041,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                   onClick={() => {
                     setShowNewsForm(false)
                     setEditingNews(null)
-                    setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                    setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
@@ -826,13 +1101,57 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                       required
                     />
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Image URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={newsForm.image_url}
+                          onChange={(e) => setNewsForm({ ...newsForm, image_url: e.target.value })}
+                          placeholder="https://example.com/image.jpg"
+                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        />
+                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image', 'news')} disabled={uploading} />
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Video URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={newsForm.video_url}
+                          onChange={(e) => setNewsForm({ ...newsForm, video_url: e.target.value })}
+                          placeholder="https://example.com/video.mp4"
+                          className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        />
+                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center">
+                          <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <input type="file" className="hidden" accept="video/*" onChange={(e) => handleFileUpload(e, 'video', 'news')} disabled={uploading} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  {uploading && (
+                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      Uploading file...
+                    </div>
+                  )}
                   <div className="flex justify-end space-x-2 pt-4">
                     <button
                       type="button"
                       onClick={() => {
                         setShowNewsForm(false)
                         setEditingNews(null)
-                        setNewsForm({ title: '', summary: '', content: '', category: 'Research' })
+                        setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
                       }}
                       className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
                     >
@@ -845,6 +1164,104 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                       {editingNews ? 'Update News' : 'Create News'}
                     </button>
                   </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Likes Modal */}
+        {showLikesModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-red-500 fill-current" />
+                  Liked by
+                </h3>
+                <button onClick={() => setShowLikesModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 max-h-96 overflow-y-auto custom-scrollbar">
+                {loadingLikes ? (
+                  <div className="flex justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : likesList.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No likes yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {likesList.map((like) => (
+                      <div key={like.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-all">
+                        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold">
+                          {like.user_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-900 dark:text-white">{like.user_name}</p>
+                          <p className="text-xs text-gray-400">{new Date(like.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Comments Modal */}
+        {activeCommentsPost && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 text-red-500" />
+                  Comments
+                </h3>
+                <button onClick={() => setActiveCommentsPost(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 flex flex-col h-[500px]">
+                <div className="flex-1 overflow-y-auto mb-4 space-y-4 custom-scrollbar pr-2">
+                  {loadingComments ? (
+                    <div className="flex justify-center py-8">
+                      <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : commentsList.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8 italic">No comments yet. Be the first to comment!</p>
+                  ) : (
+                    commentsList.map((comment) => (
+                      <div key={comment.id} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-xs flex-shrink-0">
+                          {comment.user_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <div className="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-2xl px-4 py-2">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-sm text-gray-900 dark:text-white">{comment.user_name}</span>
+                            <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <form onSubmit={handleAddComment} className="flex gap-2 pt-4 border-t dark:border-gray-700">
+                  <input
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-red-500 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!commentText.trim()}
+                    className="p-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </form>
               </div>
             </div>
