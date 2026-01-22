@@ -67,10 +67,19 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
     }
 
     const handleNotificationClick = async (notification: Notification) => {
+        console.log('[Header] Notification clicked:', notification)
         // Mark as read
         if (!notification.is_read) {
-            await markNotificationRead(notification.id)
-            fetchNotifications()
+            console.log('[Header] Marking notification as read:', notification.id)
+            const result = await markNotificationRead(notification.id)
+            console.log('[Header] Mark as read result:', result)
+            if (result.success) {
+                // Update local state immediately for better UX
+                setNotifications(prev => prev.map(n =>
+                    n.id === notification.id ? { ...n, is_read: true } : n
+                ))
+                fetchNotifications()
+            }
         }
 
         // Navigate to dashboard page

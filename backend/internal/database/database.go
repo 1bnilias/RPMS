@@ -317,6 +317,18 @@ func RunMigrations(db *Database) error {
 		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS methodology INTEGER DEFAULT 0;
 		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS results INTEGER DEFAULT 0;
 		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS conclusion INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS originality INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS clarity_organization INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS contribution_knowledge INTEGER DEFAULT 0;
+		ALTER TABLE reviews ADD COLUMN IF NOT EXISTS technical_quality INTEGER DEFAULT 0;
+		
+		-- Drop old rating constraint if it exists
+		DO $$
+		BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name = 'reviews' AND constraint_name = 'reviews_rating_check') THEN
+				ALTER TABLE reviews DROP CONSTRAINT reviews_rating_check;
+			END IF;
+		END $$;
 	`
 
 	// Add image and video columns to news

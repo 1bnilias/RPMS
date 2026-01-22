@@ -363,10 +363,8 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     }
 
     try {
-      // Update paper status to 'under_review' if it's still 'submitted'
-      if (paper.status === 'submitted') {
-        await updatePaper(paper.id, { status: 'under_review' })
-      }
+      // Update paper status to 'recommended_for_publication'
+      await updatePaper(paper.id, { status: 'recommended_for_publication' })
 
       // Send notification to admin
       await createNotification(
@@ -375,8 +373,8 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
         paper.id
       )
 
-      alert('Paper sent to admin successfully!')
-      fetchData() // Refresh the papers list
+      // Refresh the papers list - the UI will update based on the new status
+      await fetchData()
     } catch (error) {
       console.error('Failed to send paper to admin:', error)
       alert('Failed to send paper to admin')
@@ -525,7 +523,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                                 Download PDF
                               </button>
                             )}
-                            {paper.status === 'under_review' ? (
+                            {paper.status === 'recommended_for_publication' ? (
                               <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded border border-green-200 flex items-center">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Sent to Admin

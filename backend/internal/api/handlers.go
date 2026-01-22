@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"rpms-backend/internal/auth"
@@ -401,63 +402,6 @@ func (s *Server) DeleteAccount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully"})
-}
-
-func (s *Server) GetNotifications(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	id, err := uuid.Parse(userID.(string))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	ctx := c.Request.Context()
-	query := `
-		SELECT id, user_id, message, is_read, created_at, COALESCE(paper_id, '')
-		FROM notifications
-		WHERE user_id = $1
-		ORDER BY created_at DESC
-	`
-
-	rows, err := s.db.Pool.Query(ctx, query, id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications"})
-		return
-	}
-	defer rows.Close()
-
-	var notifications []models.Notification
-	for rows.Next() {
-		var n models.Notification
-		err := rows.Scan(&n.ID, &n.UserID, &n.Message, &n.IsRead, &n.CreatedAt, &n.PaperID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan notification"})
-			return
-		}
-		notifications = append(notifications, n)
-	}
-
-	c.JSON(http.StatusOK, notifications)
-}
-
-func (s *Server) MarkNotificationRead(c *gin.Context) {
-	notificationID := c.Param("id")
-	userID, _ := c.Get("user_id")
-
-	ctx := c.Request.Context()
-	query := `
-		UPDATE notifications
-		SET is_read = true
-		WHERE id = $1 AND user_id = $2
-	`
-
-	_, err := s.db.Pool.Exec(ctx, query, notificationID, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Notification marked as read"})
 }
 
 // Paper Handlers
@@ -914,7 +858,12 @@ func (s *Server) GetReviews(c *gin.Context) {
 
 	if paperID != "" {
 		query = `
-			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.problem_statement, 0), COALESCE(r.literature_review, 0), COALESCE(r.methodology, 0), COALESCE(r.results, 0), COALESCE(r.conclusion, 0), COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
+			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, 
+				   COALESCE(r.problem_statement, 0), COALESCE(r.literature_review, 0), 
+				   COALESCE(r.methodology, 0), COALESCE(r.results, 0), COALESCE(r.conclusion, 0),
+				   COALESCE(r.originality, 0), COALESCE(r.clarity_organization, 0),
+				   COALESCE(r.contribution_knowledge, 0), COALESCE(r.technical_quality, 0),
+				   COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
 				   COALESCE(reviewer.name, 'Unknown'), COALESCE(reviewer.email, ''),
 				   COALESCE(p.title, 'Unknown Paper')
 			FROM reviews r
@@ -926,7 +875,12 @@ func (s *Server) GetReviews(c *gin.Context) {
 		args = append(args, paperID)
 	} else {
 		query = `
-			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, COALESCE(r.problem_statement, 0), COALESCE(r.literature_review, 0), COALESCE(r.methodology, 0), COALESCE(r.results, 0), COALESCE(r.conclusion, 0), COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
+			SELECT r.id, r.paper_id, r.reviewer_id, r.rating, 
+				   COALESCE(r.problem_statement, 0), COALESCE(r.literature_review, 0), 
+				   COALESCE(r.methodology, 0), COALESCE(r.results, 0), COALESCE(r.conclusion, 0),
+				   COALESCE(r.originality, 0), COALESCE(r.clarity_organization, 0),
+				   COALESCE(r.contribution_knowledge, 0), COALESCE(r.technical_quality, 0),
+				   COALESCE(r.comments, ''), r.recommendation, r.created_at, r.updated_at,
 				   COALESCE(reviewer.name, 'Unknown'), COALESCE(reviewer.email, ''),
 				   COALESCE(p.title, 'Unknown Paper')
 			FROM reviews r
@@ -947,8 +901,11 @@ func (s *Server) GetReviews(c *gin.Context) {
 	for rows.Next() {
 		var review models.ReviewWithReviewer
 		err := rows.Scan(
-			&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating, &review.ProblemStatement, &review.LiteratureReview, &review.Methodology, &review.Results, &review.Conclusion, &review.Comments,
-			&review.Recommendation, &review.CreatedAt, &review.UpdatedAt,
+			&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating,
+			&review.ProblemStatement, &review.LiteratureReview, &review.Methodology,
+			&review.Results, &review.Conclusion, &review.Originality, &review.ClarityOrg,
+			&review.Contribution, &review.TechnicalQuality,
+			&review.Comments, &review.Recommendation, &review.CreatedAt, &review.UpdatedAt,
 			&review.ReviewerName, &review.ReviewerEmail, &review.PaperTitle,
 		)
 		if err != nil {
@@ -984,34 +941,37 @@ func (s *Server) CreateReview(c *gin.Context) {
 		Methodology:      req.Methodology,
 		Results:          req.Results,
 		Conclusion:       req.Conclusion,
+		Originality:      req.Originality,
+		ClarityOrg:       req.ClarityOrg,
+		Contribution:     req.Contribution,
+		TechnicalQuality: req.TechnicalQuality,
 		Comments:         req.Comments,
 		Recommendation:   req.Recommendation,
 	}
 
 	ctx := c.Request.Context()
 	query := `
-		INSERT INTO reviews (paper_id, reviewer_id, rating, problem_statement, literature_review, methodology, results, conclusion, comments, recommendation)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING id, paper_id, reviewer_id, rating, problem_statement, literature_review, methodology, results, conclusion, comments, recommendation, created_at, updated_at
+		INSERT INTO reviews (paper_id, reviewer_id, rating, problem_statement, literature_review, methodology, results, conclusion, originality, clarity_organization, contribution_knowledge, technical_quality, comments, recommendation)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		RETURNING id, paper_id, reviewer_id, rating, problem_statement, literature_review, methodology, results, conclusion, originality, clarity_organization, contribution_knowledge, technical_quality, comments, recommendation, created_at, updated_at
 	`
 
-	err = s.db.Pool.QueryRow(ctx, query, review.PaperID, review.ReviewerID, review.Rating, review.ProblemStatement, review.LiteratureReview, review.Methodology, review.Results, review.Conclusion, review.Comments, review.Recommendation).Scan(
-		&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating, &review.ProblemStatement, &review.LiteratureReview, &review.Methodology, &review.Results, &review.Conclusion, &review.Comments,
-		&review.Recommendation, &review.CreatedAt, &review.UpdatedAt,
+	err = s.db.Pool.QueryRow(ctx, query,
+		review.PaperID, review.ReviewerID, review.Rating,
+		review.ProblemStatement, review.LiteratureReview, review.Methodology,
+		review.Results, review.Conclusion, review.Originality, review.ClarityOrg,
+		review.Contribution, review.TechnicalQuality,
+		review.Comments, review.Recommendation).Scan(
+		&review.ID, &review.PaperID, &review.ReviewerID, &review.Rating,
+		&review.ProblemStatement, &review.LiteratureReview, &review.Methodology,
+		&review.Results, &review.Conclusion, &review.Originality, &review.ClarityOrg,
+		&review.Contribution, &review.TechnicalQuality,
+		&review.Comments, &review.Recommendation, &review.CreatedAt, &review.UpdatedAt,
 	)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create review"})
 		return
-	}
-
-	// Update paper status to 'under_review' after first review
-	_, err = s.db.Pool.Exec(ctx,
-		"UPDATE papers SET status = 'under_review', updated_at = NOW() WHERE id = $1 AND status = 'submitted'",
-		review.PaperID)
-	if err != nil {
-		// Log error but don't fail the request since review was created
-		fmt.Printf("Warning: Failed to update paper status: %v\n", err)
 	}
 
 	// Send notification to paper author
@@ -1272,4 +1232,78 @@ func (s *Server) CreateNotification(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, notification)
+}
+
+func (s *Server) GetNotifications(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	query := `
+		SELECT id, user_id, message, paper_id, is_read, created_at
+		FROM notifications
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := s.db.Pool.Query(ctx, query, uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications"})
+		return
+	}
+	defer rows.Close()
+
+	var notifications []models.Notification
+	for rows.Next() {
+		var notification models.Notification
+		err := rows.Scan(
+			&notification.ID, &notification.UserID, &notification.Message,
+			&notification.PaperID, &notification.IsRead, &notification.CreatedAt,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan notification"})
+			return
+		}
+		notifications = append(notifications, notification)
+	}
+
+	c.JSON(http.StatusOK, notifications)
+}
+
+func (s *Server) MarkNotificationRead(c *gin.Context) {
+	notificationID := c.Param("id")
+	fmt.Printf("[Backend] MarkNotificationRead called for ID: %s\n", notificationID)
+	id, err := strconv.Atoi(notificationID)
+	if err != nil {
+		fmt.Printf("[Backend] Error parsing notification ID: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid notification ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	query := `
+		UPDATE notifications
+		SET is_read = true
+		WHERE id = $1
+		RETURNING id, user_id, message, paper_id, is_read, created_at
+	`
+
+	var notification models.Notification
+	err = s.db.Pool.QueryRow(ctx, query, id).Scan(
+		&notification.ID, &notification.UserID, &notification.Message,
+		&notification.PaperID, &notification.IsRead, &notification.CreatedAt,
+	)
+
+	if err != nil {
+		fmt.Printf("[Backend] Error updating notification %d: %v\n", id, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read"})
+		return
+	}
+
+	fmt.Printf("[Backend] Notification %d marked as read successfully\n", id)
+	c.JSON(http.StatusOK, notification)
 }
