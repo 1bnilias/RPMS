@@ -74,11 +74,15 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
             const result = await markNotificationRead(notification.id)
             console.log('[Header] Mark as read result:', result)
             if (result.success) {
+                console.log('[Header] Successfully marked as read, updating state...')
                 // Update local state immediately for better UX
                 setNotifications(prev => prev.map(n =>
                     n.id === notification.id ? { ...n, is_read: true } : n
                 ))
                 fetchNotifications()
+            } else {
+                console.error('[Header] Failed to mark as read:', result.error)
+                alert('Failed to mark notification as read: ' + result.error)
             }
         }
 

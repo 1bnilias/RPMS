@@ -295,6 +295,12 @@ export async function updatePaper(id: string, updates: Partial<Paper>) {
     })
 }
 
+export async function recommendPaper(id: string) {
+    return request<Paper>(`/papers/${id}/recommend`, {
+        method: 'POST',
+    })
+}
+
 export async function updatePaperDetails(id: string, details: Partial<Paper>) {
     return request<Paper>(`/papers/${id}/details`, {
         method: 'PUT',

@@ -363,15 +363,27 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
     }
 
     try {
-      // Update paper status to 'recommended_for_publication'
-      await updatePaper(paper.id, { status: 'recommended_for_publication' })
+      console.log('[EditorPanel] Sending paper to admin:', paper.id)
+      // Use the dedicated recommend endpoint which is allowed for editors
+      const result = await recommendPaper(paper.id)
 
+      if (!result.success) {
+        console.error('[EditorPanel] Failed to recommend paper:', result.error)
+        alert('Failed to send paper to admin: ' + result.error)
+        return
+      }
+
+      console.log('[EditorPanel] Paper status updated, sending notification...')
       // Send notification to admin
-      await createNotification(
+      const notifResult = await createNotification(
         adminUserId,
         `Paper "${paper.title}" has been reviewed by ${user.name} and is ready for your review.`,
         paper.id
       )
+
+      if (!notifResult.success) {
+        console.warn('[EditorPanel] Failed to send notification to admin:', notifResult.error)
+      }
 
       // Refresh the papers list - the UI will update based on the new status
       await fetchData()

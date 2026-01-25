@@ -1277,14 +1277,23 @@ func (s *Server) GetNotifications(c *gin.Context) {
 func (s *Server) MarkNotificationRead(c *gin.Context) {
 	notificationID := c.Param("id")
 	fmt.Printf("[Backend] MarkNotificationRead called for ID: %s\n", notificationID)
+
 	id, err := strconv.Atoi(notificationID)
 	if err != nil {
-		fmt.Printf("[Backend] Error parsing notification ID: %v\n", err)
+		fmt.Printf("[Backend] Error parsing notification ID '%s': %v\n", notificationID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid notification ID"})
 		return
 	}
 
 	ctx := c.Request.Context()
+	// First check if notification exists
+	var exists bool
+	err = s.db.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM notifications WHERE id = $1)", id).Scan(&exists)
+	if err != nil {
+		fmt.Printf("[Backend] Error checking existence of notification %d: %v\n", id, err)
+	}
+	fmt.Printf("[Backend] Notification %d exists: %v\n", id, exists)
+
 	query := `
 		UPDATE notifications
 		SET is_read = true
@@ -1300,10 +1309,10 @@ func (s *Server) MarkNotificationRead(c *gin.Context) {
 
 	if err != nil {
 		fmt.Printf("[Backend] Error updating notification %d: %v\n", id, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read: " + err.Error()})
 		return
 	}
 
-	fmt.Printf("[Backend] Notification %d marked as read successfully\n", id)
+	fmt.Printf("[Backend] Notification %d marked as read successfully. New status: %v\n", id, notification.IsRead)
 	c.JSON(http.StatusOK, notification)
 }
