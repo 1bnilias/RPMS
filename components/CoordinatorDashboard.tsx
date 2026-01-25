@@ -112,11 +112,24 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
       const hash = window.location.hash
       if (hash && hash.startsWith('#paper-')) {
         const paperId = hash.replace('#paper-', '')
-        const element = document.getElementById(`paper-${paperId}`)
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          element.classList.add('ring-2', 'ring-red-500')
-          setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+
+        // For coordinators, papers are in the promotion modal
+        const paper = papers.find(p => p.id === paperId)
+        if (paper) {
+          setShowPromotionModal(true)
+
+          // Clear hash so it doesn't re-trigger
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+          // Wait for modal to open and render
+          setTimeout(() => {
+            const element = document.getElementById(`paper-${paperId}`)
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              element.classList.add('ring-2', 'ring-red-500')
+              setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+            }
+          }, 300) // Slightly longer delay for modal animation
         }
       }
     }
@@ -474,7 +487,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
               <button
                 onClick={() => setShowPromotionModal(true)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors whitespace-nowrap flex items-center gap-2"
+                className="bg-slate-800 text-white px-4 py-2 rounded-md hover:bg-slate-900 transition-colors whitespace-nowrap flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
                 Papers for Promotion ({papers.length})
@@ -631,24 +644,22 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                             )}
                           </div>
 
-                          {/* Social Interactions */}
+                          {/* Social Interactions - Read Only in Dashboard */}
                           <div className="flex items-center justify-between py-3 border-t border-b dark:border-gray-700 mb-4">
-                            <button
-                              onClick={() => handleLike('event', event.id)}
-                              className={`flex items-center gap-1.5 transition-colors text-xs font-medium ${engagementData[`event-${event.id}`]?.user_liked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'}`}
+                            <div
+                              className={`flex items-center gap-1.5 text-xs font-medium ${engagementData[`event-${event.id}`]?.user_liked ? 'text-red-600' : 'text-gray-500'}`}
                             >
                               <Heart className={`w-4 h-4 ${engagementData[`event-${event.id}`]?.user_liked ? 'fill-current' : ''}`} />
-                              <span onClick={(e) => { e.stopPropagation(); handleShowLikes('event', event.id); }} className="hover:underline">
+                              <span>
                                 {engagementData[`event-${event.id}`]?.likes_count || 0}
                               </span>
-                            </button>
-                            <button
-                              onClick={() => handleShowComments('event', event.id)}
-                              className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 transition-colors text-xs font-medium"
+                            </div>
+                            <div
+                              className="flex items-center gap-1.5 text-gray-500 text-xs font-medium"
                             >
                               <MessageCircle className="w-4 h-4" />
                               <span>{engagementData[`event-${event.id}`]?.comments_count || 0} Comments</span>
-                            </button>
+                            </div>
                             <div className="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
                               <Share2 className="w-4 h-4" />
                               <span>{engagementData[`event-${event.id}`]?.shares_count || 0}</span>
@@ -764,24 +775,22 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                         </p>
                       </div>
 
-                      {/* Social Interactions */}
+                      {/* Social Interactions - Read Only in Dashboard */}
                       <div className="flex items-center justify-between py-3 border-t border-b dark:border-gray-700 mb-4">
-                        <button
-                          onClick={() => handleLike('news', item.id)}
-                          className={`flex items-center gap-1.5 transition-colors text-xs font-medium ${engagementData[`news-${item.id}`]?.user_liked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'}`}
+                        <div
+                          className={`flex items-center gap-1.5 text-xs font-medium ${engagementData[`news-${item.id}`]?.user_liked ? 'text-red-600' : 'text-gray-500'}`}
                         >
                           <Heart className={`w-4 h-4 ${engagementData[`news-${item.id}`]?.user_liked ? 'fill-current' : ''}`} />
-                          <span onClick={(e) => { e.stopPropagation(); handleShowLikes('news', item.id); }} className="hover:underline">
+                          <span>
                             {engagementData[`news-${item.id}`]?.likes_count || 0}
                           </span>
-                        </button>
-                        <button
-                          onClick={() => handleShowComments('news', item.id)}
-                          className="flex items-center gap-1.5 text-gray-500 hover:text-red-600 transition-colors text-xs font-medium"
+                        </div>
+                        <div
+                          className="flex items-center gap-1.5 text-gray-500 text-xs font-medium"
                         >
                           <MessageCircle className="w-4 h-4" />
                           <span>{engagementData[`news-${item.id}`]?.comments_count || 0} Comments</span>
-                        </button>
+                        </div>
                         <div className="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
                           <Share2 className="w-4 h-4" />
                           <span>{engagementData[`news-${item.id}`]?.shares_count || 0}</span>
@@ -841,7 +850,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {papers.map(paper => (
-                        <div key={paper.id} className="border dark:border-gray-700 rounded-xl p-5 hover:border-red-500 transition-all bg-gray-50 dark:bg-gray-750">
+                        <div key={paper.id} id={`paper-${paper.id}`} className="border dark:border-gray-700 rounded-xl p-5 hover:border-red-500 transition-all bg-gray-50 dark:bg-gray-750">
                           <div className="flex flex-col h-full">
                             <div className="mb-4">
                               <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 mb-2">{paper.title}</h3>

@@ -50,6 +50,37 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
     fetchData()
   }, [fetchData])
 
+  // Handle hash navigation for deep linking
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash
+      if (hash && hash.startsWith('#paper-')) {
+        const paperId = hash.replace('#paper-', '')
+
+        // Clear hash so it doesn't re-trigger
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+        // Wait for render
+        setTimeout(() => {
+          const element = document.getElementById(`paper-${paperId}`)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            element.classList.add('ring-2', 'ring-red-500')
+            setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+          }
+        }, 100)
+      }
+    }
+
+    // Check on mount and when papers load
+    if (!loading && papers.length > 0) {
+      handleHashChange()
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [loading, papers])
+
   const handleSubmitPaper = (e: React.FormEvent) => {
     e.preventDefault()
     if (newPaper.title && newPaper.abstract && newPaper.file) {
@@ -204,7 +235,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
             ) : (
               <div className="space-y-4">
                 {papers.map(paper => (
-                  <div key={paper.id} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                  <div key={paper.id} id={`paper-${paper.id}`} className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-semibold dark:text-white">{paper.title}</h3>
