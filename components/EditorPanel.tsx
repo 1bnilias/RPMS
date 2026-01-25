@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, Download, Upload, Edit, Clock, X, MessageSquare, Send, CheckCircle, AlertCircle, ChevronRight, User as UserIcon } from 'lucide-react'
-import { User, Paper, Review, getPapers, getReviews, createReview, updatePaper, updatePaperDetails, uploadFile, recommendPaperForPublication, sendMessage, getAdminUser, createNotification } from '@/lib/api'
+import { User, Paper, Review, getPapers, getReviews, createReview, updatePaper, updatePaperDetails, uploadFile, recommendPaper, sendMessage, getAdminUser, createNotification } from '@/lib/api'
 import Header from './Header'
 
 interface EditorPanelProps {
@@ -39,6 +39,22 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   const [loading, setLoading] = useState(true)
   const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
   const [showAuthorModal, setShowAuthorModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const showStatus = (message: string, type: 'success' | 'error' = 'success') => {
+    if (type === 'success') {
+      setSuccessMessage(message)
+      setErrorMessage(null)
+    } else {
+      setErrorMessage(message)
+      setSuccessMessage(null)
+    }
+    setTimeout(() => {
+      setSuccessMessage(null)
+      setErrorMessage(null)
+    }, 5000)
+  }
 
   // Paper Details Submission State
   const [detailsPaper, setDetailsPaper] = useState<Paper | null>(null)
@@ -83,11 +99,28 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       const hash = window.location.hash
       if (hash && hash.startsWith('#paper-')) {
         const paperId = hash.replace('#paper-', '')
-        const element = document.getElementById(`paper-${paperId}`)
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          element.classList.add('ring-2', 'ring-red-500')
-          setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+
+        // Find the paper
+        const paper = papers.find(p => p.id === paperId)
+        if (paper) {
+          // If it's a pending paper, open the review modal
+          if (getPaperStatus(paper) === 'pending') {
+            setSelectedPaper(paper)
+            setShowReviewModal(true)
+          }
+
+          // Clear hash so it doesn't re-trigger
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+          // Scroll to it
+          setTimeout(() => {
+            const element = document.getElementById(`paper-${paperId}`)
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              element.classList.add('ring-2', 'ring-red-500')
+              setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+            }
+          }, 100)
         }
       }
     }
@@ -178,11 +211,11 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
             comments: '',
             recommendation: 'accept'
           })
-          alert('Review submitted successfully!')
+          showStatus('Review submitted successfully!')
         }
       } catch (error) {
         console.error('Failed to submit review:', error)
-        alert('Failed to submit review')
+        showStatus('Failed to submit review', 'error')
       }
     }
   }
@@ -239,13 +272,13 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       if (result.success && result.data) {
         setPapers(papers.map(p => p.id === detailsPaper.id ? result.data! : p))
         setDetailsPaper(null)
-        alert('Paper details updated successfully!')
+        showStatus('Paper details updated successfully!')
       } else {
-        alert('Failed to update paper details: ' + (result.error || 'Unknown error'))
+        showStatus('Failed to update paper details: ' + (result.error || 'Unknown error'), 'error')
       }
     } catch (error) {
       console.error('Failed to update paper details:', error)
-      alert('Failed to update paper details')
+      showStatus('Failed to update paper details', 'error')
     }
   }
 
@@ -295,10 +328,10 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       )
 
       setFeedbackForm({ paperId: '', message: '' })
-      alert('Feedback sent to author successfully!')
+      showStatus('Feedback sent to author successfully!')
     } catch (error) {
       console.error('Failed to send feedback:', error)
-      alert('Failed to send feedback')
+      showStatus('Failed to send feedback', 'error')
     }
   }
 
@@ -342,13 +375,13 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
       if (result.success) {
         setAdminContactForm({ paperId: '', message: '' })
-        alert('Notification sent to admin successfully!')
+        showStatus('Notification sent to admin successfully!')
       } else {
-        alert('Failed to send notification: ' + (result.error || 'Unknown error'))
+        showStatus('Failed to send notification: ' + (result.error || 'Unknown error'), 'error')
       }
     } catch (error) {
       console.error('Failed to contact admin:', error)
-      alert('Failed to send notification to admin')
+      showStatus('Failed to send notification to admin', 'error')
     }
   }
   const getPaperStatus = (paper: Paper) => {
@@ -369,7 +402,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
       if (!result.success) {
         console.error('[EditorPanel] Failed to recommend paper:', result.error)
-        alert('Failed to send paper to admin: ' + result.error)
+        showStatus('Failed to send paper to admin: ' + result.error, 'error')
         return
       }
 
@@ -389,7 +422,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       await fetchData()
     } catch (error) {
       console.error('Failed to send paper to admin:', error)
-      alert('Failed to send paper to admin')
+      showStatus('Failed to send paper to admin', 'error')
     }
   }
 
@@ -411,6 +444,20 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header user={user} title="Editor Panel" onLogout={onLogout} />
+
+      {/* Status Messages */}
+      <div className="max-w-7xl mx-auto px-6 mt-4">
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative animate-in fade-in duration-300" role="alert">
+            <span className="block sm:inline">{successMessage}</span>
+          </div>
+        )}
+        {errorMessage && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative animate-in fade-in duration-300" role="alert">
+            <span className="block sm:inline">{errorMessage}</span>
+          </div>
+        )}
+      </div>
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

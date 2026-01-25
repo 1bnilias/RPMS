@@ -1286,13 +1286,15 @@ func (s *Server) MarkNotificationRead(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	// First check if notification exists
-	var exists bool
-	err = s.db.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM notifications WHERE id = $1)", id).Scan(&exists)
+
+	// Log the current state before update
+	var currentIsRead bool
+	err = s.db.Pool.QueryRow(ctx, "SELECT is_read FROM notifications WHERE id = $1", id).Scan(&currentIsRead)
 	if err != nil {
-		fmt.Printf("[Backend] Error checking existence of notification %d: %v\n", id, err)
+		fmt.Printf("[Backend] Error checking current status of notification %d: %v\n", id, err)
+	} else {
+		fmt.Printf("[Backend] Notification %d current is_read: %v\n", id, currentIsRead)
 	}
-	fmt.Printf("[Backend] Notification %d exists: %v\n", id, exists)
 
 	query := `
 		UPDATE notifications

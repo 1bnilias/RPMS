@@ -458,7 +458,7 @@ export async function getUnreadCount() {
 }
 
 export async function getNotifications() {
-    return request<Notification[]>('/notifications')
+    return request<Notification[]>(`/notifications?t=${Date.now()}`)
 }
 
 export async function markNotificationRead(id: number) {

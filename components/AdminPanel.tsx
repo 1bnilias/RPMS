@@ -23,6 +23,22 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
   const [showAuthorModal, setShowAuthorModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'reviewed' | 'validated'>('reviewed')
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const showStatus = (message: string, type: 'success' | 'error' = 'success') => {
+    if (type === 'success') {
+      setSuccessMessage(message)
+      setErrorMessage(null)
+    } else {
+      setErrorMessage(message)
+      setSuccessMessage(null)
+    }
+    setTimeout(() => {
+      setSuccessMessage(null)
+      setErrorMessage(null)
+    }, 5000)
+  }
 
   useEffect(() => {
     fetchData()
@@ -36,11 +52,32 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       const hash = window.location.hash
       if (hash && hash.startsWith('#paper-')) {
         const paperId = hash.replace('#paper-', '')
-        const element = document.getElementById(`paper-${paperId}`)
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          element.classList.add('ring-2', 'ring-red-500')
-          setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+
+        // Find the paper
+        const paper = papers.find(p => p.id === paperId)
+        if (paper) {
+          // Find which tab the paper belongs to
+          const isPending = paper.status === 'recommended_for_publication'
+          const isValidated = paper.pi_name || paper.institution_code
+
+          if (isPending) setActiveTab('reviewed')
+          else if (isValidated) setActiveTab('validated')
+
+          // Open the paper details
+          setSelectedPaper(paper)
+
+          // Clear hash so it doesn't re-trigger on polling
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+          // Wait for tab switch and render
+          setTimeout(() => {
+            const element = document.getElementById(`paper-${paperId}`)
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              element.classList.add('ring-2', 'ring-red-500')
+              setTimeout(() => element.classList.remove('ring-2', 'ring-red-500'), 3000)
+            }
+          }, 100)
         }
       }
     }
@@ -89,7 +126,8 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
   // Categorize papers by status
   const pendingPapers = papers.filter(paper =>
-    paper.status === 'recommended_for_publication'
+    paper.status === 'recommended_for_publication' ||
+    (paper.status === 'under_review' && paper.reviews.length > 0)
   )
   const approvedPapers = papers.filter(paper => paper.status === 'approved')
   const rejectedPapers = papers.filter(paper => paper.status === 'rejected')
@@ -107,9 +145,13 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       if (result.success) {
         // Refresh the papers list to show updated status
         fetchData()
+        showStatus(`Paper ${status} successfully!`)
+      } else {
+        showStatus(`Failed to ${status} paper: ${result.error}`, 'error')
       }
     } catch (error) {
       console.error('Failed to update paper status:', error)
+      showStatus(`Failed to ${status} paper`, 'error')
     }
   }
 
@@ -148,16 +190,16 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
           if (result.success) {
             setEditorContactForm({ paperId: '', message: '' })
-            alert('Message sent to editor successfully!')
+            showStatus('Message sent to editor successfully!')
             return
           }
         }
       }
 
-      alert('Please select a paper to contact its editor')
+      showStatus('Please select a paper to contact its editor', 'error')
     } catch (error) {
       console.error('Failed to contact editor:', error)
-      alert('Failed to send message to editor')
+      showStatus('Failed to send message to editor', 'error')
     }
   }
 
@@ -206,7 +248,21 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header user={user} title="Admin Panel" onLogout={onLogout} />
+      <Header user={user} title="Admin Dashboard" onLogout={onLogout} />
+
+      {/* Status Messages */}
+      <div className="max-w-7xl mx-auto px-6 mt-4">
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative animate-in fade-in duration-300" role="alert">
+            <span className="block sm:inline">{successMessage}</span>
+          </div>
+        )}
+        {errorMessage && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative animate-in fade-in duration-300" role="alert">
+            <span className="block sm:inline">{errorMessage}</span>
+          </div>
+        )}
+      </div>
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -266,7 +322,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             {activeTab === 'reviewed' ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div className="p-6 border-b dark:border-gray-700">
-                  <h2 className="text-xl font-semibold text-yellow-600">Pending Approval ({pendingPapers.length})</h2>
+                  <h2 className="text-xl font-semibold text-yellow-600">Reviewed Papers ({pendingPapers.length})</h2>
                 </div>
                 <div className="p-6">
                   {pendingPapers.length === 0 ? (

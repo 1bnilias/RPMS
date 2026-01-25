@@ -79,7 +79,9 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
                 setNotifications(prev => prev.map(n =>
                     n.id === notification.id ? { ...n, is_read: true } : n
                 ))
-                fetchNotifications()
+                // Also update unread count locally
+                setUnreadCount(prev => Math.max(0, prev - 1))
+                // fetchNotifications() // Skip immediate fetch to avoid race condition with local state
             } else {
                 console.error('[Header] Failed to mark as read:', result.error)
                 alert('Failed to mark notification as read: ' + result.error)
@@ -92,6 +94,7 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
 
             // If we are already on the dashboard page, manually set the hash to trigger scrolling
             if (window.location.pathname === '/dashboard') {
+                window.location.hash = '' // Clear first to ensure change is detected
                 window.location.hash = `paper-${notification.paper_id}`
             } else {
                 // Otherwise navigate to the dashboard page with the hash
