@@ -1,0 +1,18 @@
+﻿=== RUN   TestPublicationWorkflow
+2026/01/07 21:25:15 Successfully connected to database
+2026/01/07 21:25:18 Database migrations completed successfully
+Registering author...
+==================================================
+EMAIL VERIFICATION FOR author_1767810318280119600@test.com
+CODE: 307936
+==================================================
+[GIN] 2026/01/07 - 21:25:18 | 201 |    331.5869ms |                 | POST     "/api/v1/auth/register"
+Register response: 201 - {"email":"author_1767810318280119600@test.com","message":"Registration successful. Please check your email for the verification code."}
+[GIN] 2026/01/07 - 21:25:18 | 200 |    309.5853ms |                 | POST     "/api/v1/auth/login"
+[GIN] 2026/01/07 - 21:25:19 | 201 |    267.1445ms |                 | POST     "/api/v1/papers"
+[GIN] 2026/01/07 - 21:25:19 | 400 |            0s |                 | PUT      "/api/v1/papers/c4fd2026-ae03-4fc3-83b8-34478377a107"
+    workflow_test.go:141: Failed to submit paper: 400 - {"error":"Key: 'UpdatePaperRequest.Title' Error:Field validation for 'Title' failed on the 'required' tag"}
+--- FAIL: TestPublicationWorkflow (7.60s)
+FAIL
+FAIL	rpms-backend/internal/api	7.656s
+FAIL

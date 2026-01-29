@@ -8,6 +8,7 @@ export interface User {
     avatar?: string
     bio?: string
     preferences?: Record<string, any>
+    date_of_birth?: string
     created_at: string
     updated_at: string
 }
@@ -24,7 +25,46 @@ export interface Paper {
     updated_at: string
     author_name?: string
     author_email?: string
+    author_academic_year?: string
+    author_author_type?: string
+    author_author_category?: string
+    author_academic_rank?: string
+    author_qualification?: string
+    author_employment_type?: string
+    author_gender?: string
+    author_date_of_birth?: string
+    author_bio?: string
+    author_avatar?: string
     file_url?: string
+    // Editor Submission Fields
+    institution_code?: string
+    publication_id?: string
+    publication_isced_band?: string
+    publication_title_amharic?: string
+    publication_date?: string
+    publication_type?: string
+    journal_type?: string
+    journal_name?: string
+    indigenous_knowledge?: boolean
+    // Research Project Fields
+    fiscal_year?: string
+    allocated_budget?: number
+    external_budget?: number
+    nrf_fund?: number
+    research_type?: string
+    completion_status?: string
+    female_researchers?: number
+    male_researchers?: number
+    outside_female_researchers?: number
+    outside_male_researchers?: number
+    benefited_industry?: string
+    ethical_clearance?: string
+    pi_name?: string
+    pi_gender?: string
+    co_investigators?: string
+    produced_prototype?: string
+    hetril_collaboration?: string
+    submitted_to_incubator?: string
 }
 
 export interface Notification {
@@ -41,6 +81,11 @@ export interface Review {
     paper_id: string
     reviewer_id: string
     rating: number
+    problem_statement?: number
+    literature_review?: number
+    methodology?: number
+    results?: number
+    conclusion?: number
     comments?: string
     recommendation: 'accept' | 'minor_revision' | 'major_revision' | 'reject'
     created_at: string
@@ -54,13 +99,29 @@ export interface Event {
     id: string
     title: string
     description?: string
+    category?: string
+    status?: string
+    image_url?: string
+    video_url?: string
     date: string
     location?: string
-    coordinator_id: string
+    coordinator_id?: string
+    created_at?: string
+    updated_at?: string
+}
+
+export interface News {
+    id: string
+    title: string
+    summary: string
+    content: string
+    category: string
+    status: string
+    image_url?: string
+    video_url?: string
+    editor_id: string
     created_at: string
     updated_at: string
-    coordinator_name?: string
-    coordinator_email?: string
 }
 
 export interface Message {
@@ -85,13 +146,30 @@ export interface Contact {
     name: string
     email: string
     role: string
-    avatar: string
-    unread_count: number
+    avatar?: string
+    unread_count?: number
     last_message?: {
-        content: string
+        content?: string
         attachment_url?: string
-        created_at: string
     }
+}
+
+export interface Comment {
+    id: string
+    post_id: string
+    post_type: 'news' | 'event'
+    user_id: string
+    user_name: string
+    user_avatar?: string
+    content: string
+    created_at: string
+}
+
+export interface EngagementStats {
+    likes_count: number
+    comments_count: number
+    shares_count: number
+    user_liked: boolean
 }
 
 // Helper to get auth header
@@ -217,6 +295,19 @@ export async function updatePaper(id: string, updates: Partial<Paper>) {
     })
 }
 
+export async function recommendPaper(id: string) {
+    return request<Paper>(`/papers/${id}/recommend`, {
+        method: 'POST',
+    })
+}
+
+export async function updatePaperDetails(id: string, details: Partial<Paper>) {
+    return request<Paper>(`/papers/${id}/details`, {
+        method: 'PUT',
+        body: JSON.stringify(details),
+    })
+}
+
 export async function deletePaper(id: string) {
     return request(`/papers/${id}`, {
         method: 'DELETE',
@@ -243,8 +334,15 @@ export async function createReview(review: Omit<Review, 'id' | 'created_at' | 'u
 }
 
 // Events
-export async function getEvents() {
-    return request<Event[]>('/events')
+export async function getEvents(status?: string) {
+    const query = status ? `?status=${status}` : ''
+    return request<Event[]>(`/events${query}`)
+}
+
+export async function publishEvent(id: string) {
+    return request<Event>(`/events/${id}/publish`, {
+        method: 'PUT',
+    })
 }
 
 export async function createEvent(event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) {
@@ -267,6 +365,37 @@ export async function deleteEvent(id: string) {
     })
 }
 
+// News
+export async function getNews(status?: string) {
+    const query = status ? `?status=${status}` : ''
+    return request<News[]>(`/news${query}`)
+}
+
+export async function createNews(news: Omit<News, 'id' | 'editor_id' | 'status' | 'created_at' | 'updated_at'>) {
+    return request<News>('/news', {
+        method: 'POST',
+        body: JSON.stringify(news),
+    })
+}
+
+export async function updateNews(id: string, updates: Partial<News>) {
+    return request<News>(`/news/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+    })
+}
+
+export async function deleteNews(id: string) {
+    return request(`/news/${id}`, {
+        method: 'DELETE',
+    })
+}
+
+export async function publishNews(id: string) {
+    return request<News>(`/news/${id}/publish`, {
+        method: 'PUT',
+    })
+}
 
 // Chat
 export async function getContacts() {
@@ -329,7 +458,7 @@ export async function getUnreadCount() {
 }
 
 export async function getNotifications() {
-    return request<Notification[]>('/notifications')
+    return request<Notification[]>(`/notifications?t=${Date.now()}`)
 }
 
 export async function markNotificationRead(id: number) {
@@ -373,4 +502,43 @@ export async function createNotification(userId: string, message: string, paperI
             paper_id: paperId
         })
     })
+}
+
+// Social Features
+export async function likePost(postType: 'news' | 'event', postId: string) {
+    return request<{ liked: boolean }>('/interactions/like', {
+        method: 'POST',
+        body: JSON.stringify({ post_type: postType, post_id: postId })
+    })
+}
+
+export async function getPostLikes(postType: 'news' | 'event', postId: string) {
+    return request<{ likes: any[]; count: number }>(`/interactions/likes/${postType}/${postId}`)
+}
+
+export async function addComment(postType: 'news' | 'event', postId: string, content: string) {
+    return request<{ message: string; comment: Comment }>('/interactions/comment', {
+        method: 'POST',
+        body: JSON.stringify({ post_type: postType, post_id: postId, content })
+    })
+}
+
+export async function getComments(postType: 'news' | 'event', postId: string) {
+    return request<{ comments: Comment[]; count: number }>(`/interactions/comments/${postType}/${postId}`)
+}
+
+export async function shareToMessage(postType: 'news' | 'event', postId: string, receiverId: string, message?: string) {
+    return request<{ success: boolean }>('/interactions/share', {
+        method: 'POST',
+        body: JSON.stringify({
+            post_type: postType,
+            post_id: postId,
+            recipient_id: receiverId,
+            message_text: message
+        })
+    })
+}
+
+export async function getEngagementStats(postType: 'news' | 'event', postId: string) {
+    return request<EngagementStats>(`/interactions/stats/${postType}/${postId}`)
 }

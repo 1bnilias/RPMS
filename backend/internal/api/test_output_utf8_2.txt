@@ -1,0 +1,32 @@
+﻿=== RUN   TestPublicationWorkflow
+2026/01/07 21:27:07 Successfully connected to database
+2026/01/07 21:27:10 Database migrations completed successfully
+Registering author...
+==================================================
+EMAIL VERIFICATION FOR author_1767810430247424100@test.com
+CODE: 421446
+==================================================
+[GIN] 2026/01/07 - 21:27:10 | 201 |    342.6782ms |                 | POST     "/api/v1/auth/register"
+Register response: 201 - {"email":"author_1767810430247424100@test.com","message":"Registration successful. Please check your email for the verification code."}
+[GIN] 2026/01/07 - 21:27:10 | 200 |     353.199ms |                 | POST     "/api/v1/auth/login"
+[GIN] 2026/01/07 - 21:27:11 | 201 |    251.7757ms |                 | POST     "/api/v1/papers"
+[GIN] 2026/01/07 - 21:27:12 | 200 |    1.7140496s |                 | PUT      "/api/v1/papers/14a66d8a-ab9e-44be-a7fc-d6257ce346e1"
+==================================================
+EMAIL VERIFICATION FOR editor_1767810432909126600@test.com
+CODE: 984748
+==================================================
+[GIN] 2026/01/07 - 21:27:13 | 201 |    441.8311ms |                 | POST     "/api/v1/auth/register"
+[GIN] 2026/01/07 - 21:27:14 | 200 |    442.8919ms |                 | POST     "/api/v1/auth/login"
+[GIN] 2026/01/07 - 21:27:15 | 200 |    696.4252ms |                 | PUT      "/api/v1/papers/14a66d8a-ab9e-44be-a7fc-d6257ce346e1/details"
+==================================================
+EMAIL VERIFICATION FOR coord_1767810435189965500@test.com
+CODE: 568655
+==================================================
+[GIN] 2026/01/07 - 21:27:15 | 201 |    365.6769ms |                 | POST     "/api/v1/auth/register"
+[GIN] 2026/01/07 - 21:27:22 | 200 |    607.2699ms |                 | POST     "/api/v1/auth/login"
+[GIN] 2026/01/07 - 21:27:22 | 403 |            0s |                 | PUT      "/api/v1/papers/14a66d8a-ab9e-44be-a7fc-d6257ce346e1/details"
+    workflow_test.go:235: Failed to validate paper details by coordinator: 403 - {"error":"Insufficient permissions"}
+--- FAIL: TestPublicationWorkflow (17.07s)
+FAIL
+FAIL	rpms-backend/internal/api	17.183s
+FAIL

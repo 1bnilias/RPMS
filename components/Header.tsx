@@ -67,22 +67,38 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
     }
 
     const handleNotificationClick = async (notification: Notification) => {
+        console.log('[Header] Notification clicked:', notification)
         // Mark as read
         if (!notification.is_read) {
-            await markNotificationRead(notification.id)
-            fetchNotifications()
+            console.log('[Header] Marking notification as read:', notification.id)
+            const result = await markNotificationRead(notification.id)
+            console.log('[Header] Mark as read result:', result)
+            if (result.success) {
+                console.log('[Header] Successfully marked as read, updating state...')
+                // Update local state immediately for better UX
+                setNotifications(prev => prev.map(n =>
+                    n.id === notification.id ? { ...n, is_read: true } : n
+                ))
+                // Also update unread count locally
+                setUnreadCount(prev => Math.max(0, prev - 1))
+                // fetchNotifications() // Skip immediate fetch to avoid race condition with local state
+            } else {
+                console.error('[Header] Failed to mark as read:', result.error)
+                alert('Failed to mark notification as read: ' + result.error)
+            }
         }
 
-        // Navigate to home page (which shows role-specific dashboard)
+        // Navigate to dashboard page
         if (notification.paper_id) {
             setShowNotifications(false)
 
-            // If we are already on the home page, manually set the hash to trigger scrolling
-            if (window.location.pathname === '/') {
+            // If we are already on the dashboard page, manually set the hash to trigger scrolling
+            if (window.location.pathname === '/dashboard') {
+                window.location.hash = '' // Clear first to ensure change is detected
                 window.location.hash = `paper-${notification.paper_id}`
             } else {
-                // Otherwise navigate to the page with the hash
-                router.push(`/#paper-${notification.paper_id}`)
+                // Otherwise navigate to the dashboard page with the hash
+                router.push(`/dashboard#paper-${notification.paper_id}`)
             }
         }
     }

@@ -1,41 +1,105 @@
 'use client'
 
-import { newsItems } from '@/lib/mockData'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { getNews, News } from '@/lib/api'
+import SocialPost from '@/components/SocialPost'
+import ShareModal from '@/components/ShareModal'
 
 export default function NewsFeed() {
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest News</h2>
-                <button className="text-sm text-red-600 hover:text-red-700 font-medium">View All</button>
-            </div>
+    const [newsItems, setNewsItems] = useState<News[]>([])
+    const [loading, setLoading] = useState(true)
+    const [shareModalOpen, setShareModalOpen] = useState(false)
+    const [selectedPost, setSelectedPost] = useState<{ id: string; type: 'news' | 'event'; title: string } | null>(null)
 
-            <div className="grid gap-6">
-                {newsItems.map((item) => (
-                    <Link href={`/news/${item.id}`} key={item.id} className="block group">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all group-hover:border-red-200 dark:group-hover:border-red-900">
-                            <div className="flex items-start gap-4">
-                                <div className={`p-3 rounded-lg ${item.bgColor}`}>
-                                    <item.icon className={`h-6 w-6 ${item.color}`} />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${item.bgColor} ${item.color}`}>
-                                            {item.category}
-                                        </span>
-                                        <span className="text-sm text-gray-500">{item.date}</span>
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-red-600 transition-colors">{item.title}</h3>
-                                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed line-clamp-2">
-                                        {item.summary}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </Link>
+    useEffect(() => {
+        const fetchNews = async () => {
+            try {
+                const result = await getNews('published')
+                if (result.success && result.data) {
+                    setNewsItems(result.data)
+                }
+            } catch (error) {
+                console.error('Failed to fetch news:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchNews()
+    }, [])
+
+    const handleShare = (id: string, title: string) => {
+        setSelectedPost({ id, type: 'news', title })
+        setShareModalOpen(true)
+    }
+
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                    </div>
                 ))}
             </div>
-        </div>
+        )
+    }
+
+    if (newsItems.length === 0) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest News</h2>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">No news available yet.</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Check back soon for updates!</p>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest News</h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {newsItems.length} {newsItems.length === 1 ? 'post' : 'posts'}
+                    </span>
+                </div>
+
+                <div className="space-y-4">
+                    {newsItems.map((item) => (
+                        <SocialPost
+                            key={item.id}
+                            id={item.id}
+                            type="news"
+                            title={item.title}
+                            summary={item.summary}
+                            content={item.content}
+                            category={item.category}
+                            image_url={item.image_url}
+                            video_url={item.video_url}
+                            created_at={item.created_at}
+                            onShare={() => handleShare(item.id, item.title)}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Share Modal */}
+            {selectedPost && (
+                <ShareModal
+                    isOpen={shareModalOpen}
+                    onClose={() => setShareModalOpen(false)}
+                    postType={selectedPost.type}
+                    postId={selectedPost.id}
+                    postTitle={selectedPost.title}
+                />
+            )}
+        </>
     )
 }
