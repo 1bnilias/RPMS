@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, MessageSquare, Send, X, FileText, Download, Bell, CheckCircle, AlertCircle } from 'lucide-react'
-import { User, Paper, Review, Notification, getPapers, getReviews, updatePaper, sendMessage, uploadFile, getNotifications, markNotificationRead } from '@/lib/api'
+import { Users, MessageSquare, Send, X, FileText, Download, Bell, CheckCircle, AlertCircle, Plus, Shield } from 'lucide-react'
+import { User, Paper, Review, Notification, getPapers, getReviews, updatePaper, sendMessage, uploadFile, getNotifications, markNotificationRead, createAdminUser, getAdminStaff } from '@/lib/api'
 import Header from './Header'
 
 interface AdminPanelProps {
@@ -14,6 +14,15 @@ interface PaperWithReviews extends Paper {
   reviews: Review[]
 }
 
+interface StaffMember {
+  id: string
+  email: string
+  name: string
+  role: string
+  created_at: string
+  is_verified: boolean
+}
+
 export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [papers, setPapers] = useState<PaperWithReviews[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,9 +31,14 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [editorContactForm, setEditorContactForm] = useState({ paperId: '', message: '' })
   const [selectedAuthor, setSelectedAuthor] = useState<Paper | null>(null)
   const [showAuthorModal, setShowAuthorModal] = useState(false)
-  const [activeTab, setActiveTab] = useState<'reviewed' | 'validated'>('reviewed')
+  const [activeTab, setActiveTab] = useState<'reviewed' | 'validated' | 'staff'>('reviewed')
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Staff Management State
+  const [staff, setStaff] = useState<StaffMember[]>([])
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false)
+  const [newStaffForm, setNewStaffForm] = useState({ name: '', email: '', password: '', role: 'editor' })
 
   const showStatus = (message: string, type: 'success' | 'error' = 'success') => {
     if (type === 'success') {
@@ -117,6 +131,14 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
         setNotifications(notificationsResult.data)
       }
 
+      // Fetch Staff
+      if (activeTab === 'staff') {
+        const staffResult = await getAdminStaff()
+        if (staffResult.success && staffResult.data) {
+          setStaff(staffResult.data)
+        }
+      }
+
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -170,6 +192,39 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     return Object.entries(counts)
       .map(([rec, count]) => `${count} ${rec.replace(/_/g, ' ')}`)
       .join(', ')
+  }
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (newStaffForm.role !== 'editor' && newStaffForm.role !== 'coordinator') {
+        showStatus('Invalid role selected', 'error')
+        return
+      }
+
+      const result = await createAdminUser({
+        name: newStaffForm.name,
+        email: newStaffForm.email,
+        password: newStaffForm.password,
+        role: newStaffForm.role as 'editor' | 'coordinator'
+      })
+
+      if (result.success) {
+        showStatus(`${newStaffForm.role} created successfully!`)
+        setShowAddStaffModal(false)
+        setNewStaffForm({ name: '', email: '', password: '', role: 'editor' })
+        // Refresh staff list
+        const staffResult = await getAdminStaff()
+        if (staffResult.success && staffResult.data) {
+          setStaff(staffResult.data)
+        }
+      } else {
+        showStatus(result.error || 'Failed to create staff', 'error')
+      }
+    } catch (error) {
+      console.error('Failed to create staff:', error)
+      showStatus('Failed to create staff', 'error')
+    }
   }
 
   const contactEditor = async (e: React.FormEvent) => {
@@ -316,10 +371,83 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               >
                 Validated Papers
               </button>
+              <button
+                onClick={() => setActiveTab('staff')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'staff'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+              >
+                Manage Staff
+              </button>
             </div>
 
             {/* Content Area */}
-            {activeTab === 'reviewed' ? (
+            {activeTab === 'staff' ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Staff Management</h2>
+                  <button
+                    onClick={() => setShowAddStaffModal(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Staff
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                    <thead className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold">
+                      <tr>
+                        <th className="p-4">Name</th>
+                        <th className="p-4">Username (Email)</th>
+                        <th className="p-4">Role</th>
+                        <th className="p-4">Joined</th>
+                        <th className="p-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {staff.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-gray-500">No staff members found.</td>
+                        </tr>
+                      ) : (
+                        staff.map(member => (
+                          <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td className="p-4 font-medium text-gray-900 dark:text-white flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold">
+                                {member.name.charAt(0).toUpperCase()}
+                              </div>
+                              {member.name}
+                            </td>
+                            <td className="p-4">{member.email}</td>
+                            <td className="p-4 text-xs font-bold uppercase tracking-wider">
+                              <span className={`px-2 py-1 rounded-full ${member.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                member.role === 'editor' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                {member.role}
+                              </span>
+                            </td>
+                            <td className="p-4">{new Date(member.created_at).toLocaleDateString()}</td>
+                            <td className="p-4">
+                              {member.is_verified ? (
+                                <span className="flex items-center text-green-600 text-xs font-medium bg-green-50 px-2 py-1 rounded w-fit">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="text-yellow-600 text-xs">Pending</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : activeTab === 'reviewed' ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div className="p-6 border-b dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-yellow-600">Reviewed Papers ({pendingPapers.length})</h2>
@@ -791,6 +919,96 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Add Staff Modal */}
+      {showAddStaffModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-t-xl">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                <Shield className="w-6 h-6 mr-2 text-red-600" />
+                Add New Staff Member
+              </h2>
+              <button
+                onClick={() => setShowAddStaffModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddStaff} className="p-6 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300 mb-4">
+                Creating a staff account will generate a confirmed user. Please share the credentials with the staff member securely.
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newStaffForm.name}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, name: e.target.value })}
+                  className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all dark:text-white"
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Username (Email)</label>
+                <input
+                  type="email"
+                  required
+                  value={newStaffForm.email}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, email: e.target.value })}
+                  className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all dark:text-white"
+                  placeholder="e.g. john@example.com"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                  <select
+                    value={newStaffForm.role}
+                    onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value })}
+                    className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all dark:text-white"
+                  >
+                    <option value="editor">Editor</option>
+                    <option value="coordinator">Coordinator</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                  <input
+                    type="text"
+                    required
+                    value={newStaffForm.password}
+                    onChange={(e) => setNewStaffForm({ ...newStaffForm, password: e.target.value })}
+                    className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all dark:text-white"
+                    placeholder="Generates if empty..." // In current logic we require it, let's make it input
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddStaffModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors bg-white dark:bg-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-lg shadow-red-600/20"
+                >
+                  Create Account
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

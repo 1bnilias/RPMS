@@ -143,11 +143,12 @@ func SetupRoutes(router *gin.Engine, db *database.Database, cfg *config.Config) 
 			admin := protected.Group("/admin")
 			admin.Use(middleware.AdminOnly())
 			{
-				// Additional admin-specific routes can be added here
 				admin.GET("/stats", func(c *gin.Context) {
 					// TODO: Implement admin statistics
 					c.JSON(200, gin.H{"message": "Admin statistics endpoint"})
 				})
+				admin.POST("/users", server.AdminCreateUser)
+				admin.GET("/staff", server.GetAdminStaff)
 			}
 		}
 	}

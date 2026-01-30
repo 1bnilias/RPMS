@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"rpms-backend/internal/auth"
 	"rpms-backend/internal/config"
@@ -1317,4 +1318,105 @@ func (s *Server) MarkNotificationRead(c *gin.Context) {
 
 	fmt.Printf("[Backend] Notification %d marked as read successfully. New status: %v\n", id, notification.IsRead)
 	c.JSON(http.StatusOK, notification)
+}
+
+// Admin User Management Handlers
+
+func (s *Server) AdminCreateUser(c *gin.Context) {
+	var req models.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate role (must be editor or coordinator)
+	if req.Role != "editor" && req.Role != "coordinator" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role. Only editor and coordinator can be created by admin."})
+		return
+	}
+
+	// Create user in Supabase (confirmed)
+	metadata := map[string]interface{}{
+		"name": req.Name,
+		"role": req.Role,
+	}
+
+	sbUser, err := s.supabase.AdminCreateUser(req.Email, req.Password, metadata)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user in Supabase: %v", err)})
+		return
+	}
+
+	ctx := c.Request.Context()
+	user := models.User{
+		ID:          uuid.MustParse(sbUser.ID),
+		Email:       sbUser.Email,
+		Name:        req.Name,
+		Role:        req.Role,
+		IsVerified:  true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		Preferences: map[string]interface{}{},
+	}
+
+	// Insert into local DB
+	query := `
+		INSERT INTO users (id, email, password_hash, name, role, is_verified, created_at, updated_at, preferences)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	// We assume simple password hash storage isn't needed locally if we rely on Supabase,
+	// but we can store a placeholder or hash it if we want local fallback.
+	// For now, empty string.
+	_, err = s.db.Pool.Exec(ctx, query,
+		user.ID, user.Email, "", user.Name, user.Role, user.IsVerified, user.CreatedAt, user.UpdatedAt, user.Preferences,
+	)
+
+	if err != nil {
+		// Try to delete from Supabase if local insert fails?
+		// For now just error out.
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user in local DB: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
+}
+
+func (s *Server) GetAdminStaff(c *gin.Context) {
+	ctx := c.Request.Context()
+	query := `
+		SELECT id, email, name, role, created_at, is_verified
+		FROM users
+		WHERE role IN ('editor', 'coordinator')
+		ORDER BY created_at DESC
+	`
+
+	rows, err := s.db.Pool.Query(ctx, query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch staff"})
+		return
+	}
+	defer rows.Close()
+
+	var staff []gin.H
+	for rows.Next() {
+		var id uuid.UUID
+		var email, name, role string
+		var createdAt time.Time
+		var isVerified bool
+
+		if err := rows.Scan(&id, &email, &name, &role, &createdAt, &isVerified); err != nil {
+			continue
+		}
+
+		staff = append(staff, gin.H{
+			"id":          id,
+			"email":       email,
+			"name":        name,
+			"role":        role,
+			"created_at":  createdAt,
+			"is_verified": isVerified,
+		})
+	}
+
+	c.JSON(http.StatusOK, staff)
 }

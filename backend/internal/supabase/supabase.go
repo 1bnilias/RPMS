@@ -215,3 +215,50 @@ func (s *Client) SignIn(email, password string) (*SignInResponse, error) {
 
 	return &result, nil
 }
+
+type AdminCreateUserRequest struct {
+	Email        string                 `json:"email"`
+	Password     string                 `json:"password"`
+	EmailConfirm bool                   `json:"email_confirm"`
+	UserMetadata map[string]interface{} `json:"user_metadata"`
+	AppMetadata  map[string]interface{} `json:"app_metadata"`
+}
+
+func (s *Client) AdminCreateUser(email, password string, userMetadata map[string]interface{}) (*User, error) {
+	url := fmt.Sprintf("%s/auth/v1/admin/users", s.config.Supabase.URL)
+	reqBody, _ := json.Marshal(AdminCreateUserRequest{
+		Email:        email,
+		Password:     password,
+		EmailConfirm: true,
+		UserMetadata: userMetadata,
+	})
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, err
+	}
+
+	// Use Service Role Key for Admin operations
+	req.Header.Set("apikey", s.config.Supabase.ServiceRoleKey)
+	req.Header.Set("Authorization", "Bearer "+s.config.Supabase.ServiceRoleKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		var errResp map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		return nil, fmt.Errorf("supabase admin create user failed (status %d): %v", resp.StatusCode, errResp)
+	}
+
+	var result User
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
