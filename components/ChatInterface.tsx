@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { User, Contact, Message, getContacts, getMessages, sendMessage, uploadChatFile } from '@/lib/api'
-import { Send, Search, MessageSquare, Paperclip, X, Reply, Forward } from 'lucide-react'
+import { Send, Search, MessageSquare, Paperclip, X, Reply, Forward, Menu } from 'lucide-react'
 import MessageAttachment from './MessageAttachment'
 import ReplyPreview from './ReplyPreview'
 import ForwardModal from './ForwardModal'
@@ -41,6 +41,9 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
     // Forward state
     const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null)
     const [isForwardModalOpen, setIsForwardModalOpen] = useState(false)
+
+    // Mobile sidebar state
+    const [showSidebar, setShowSidebar] = useState(true)
 
     // Fetch contacts on mount
     useEffect(() => {
@@ -261,7 +264,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden h-[calc(100vh-120px)] flex border dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 sm:rounded-lg shadow-lg overflow-hidden h-full flex border-x dark:border-gray-700 w-full max-w-full relative mx-auto">
             <ForwardModal
                 isOpen={isForwardModalOpen}
                 onClose={() => setIsForwardModalOpen(false)}
@@ -270,8 +273,8 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                 messageContent={forwardingMessage?.content || (forwardingMessage?.attachment_url ? '[Attachment]' : '')}
             />
             {/* Sidebar - Contact List */}
-            <div className="w-1/3 border-r dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-900/50">
-                <div className="p-4 border-b dark:border-gray-700">
+            <div className={`${showSidebar ? 'block' : 'hidden'} md:block w-full md:w-1/3 border-r dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-900/50 absolute md:relative z-10 h-full md:h-auto`}>
+                <div className="p-3 sm:p-4 border-b dark:border-gray-700">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <input
@@ -279,7 +282,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                             placeholder="Search contacts..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                            className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                         />
                     </div>
                 </div>
@@ -293,13 +296,16 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                         filteredContacts.map(contact => (
                             <div
                                 key={contact.id}
-                                onClick={() => setSelectedContact(contact)}
-                                className={`p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b dark:border-gray-700 ${selectedContact?.id === contact.id ? 'bg-white dark:bg-gray-800 border-l-4 border-l-red-600' : ''
+                                onClick={() => {
+                                    setSelectedContact(contact)
+                                    setShowSidebar(false) // Hide sidebar on mobile when contact selected
+                                }}
+                                className={`p-3 sm:p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b dark:border-gray-700 ${selectedContact?.id === contact.id ? 'bg-white dark:bg-gray-800 border-l-4 border-l-red-600' : ''
                                     }`}
                             >
                                 <div className="flex justify-between items-start">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold overflow-hidden">
+                                    <div className="flex items-center space-x-2 sm:space-x-3">
+                                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold overflow-hidden flex-shrink-0">
                                             {contact.avatar ? (
                                                 <Image
                                                     src={contact.avatar}
@@ -312,8 +318,8 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                 contact.name.charAt(0).toUpperCase()
                                             )}
                                         </div>
-                                        <div>
-                                            <h3 className="font-medium text-gray-900 dark:text-white">{contact.name}</h3>
+                                        <div className="min-w-0">
+                                            <h3 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">{contact.name}</h3>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{contact.role}</p>
                                         </div>
                                     </div>
@@ -324,7 +330,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                     )}
                                 </div>
                                 {contact.last_message && (
-                                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 truncate pl-13">
+                                    <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate pl-10 sm:pl-13">
                                         {contact.last_message.content || (contact.last_message.attachment_url ? '[Attachment]' : '')}
                                     </p>
                                 )}
@@ -335,13 +341,20 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
             </div>
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
+            <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 w-full min-w-0 overflow-x-hidden">
                 {selectedContact ? (
                     <>
                         {/* Chat Header */}
-                        <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
-                            <div className="flex items-center space-x-3">
-                                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold overflow-hidden">
+                        <div className="p-3 sm:p-4 border-b dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
+                            <div className="flex items-center space-x-2 sm:space-x-3">
+                                {/* Mobile back button */}
+                                <button
+                                    onClick={() => setShowSidebar(true)}
+                                    className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                                >
+                                    <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                                </button>
+                                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold overflow-hidden flex-shrink-0">
                                     {selectedContact.avatar ? (
                                         <Image
                                             src={selectedContact.avatar}
@@ -354,15 +367,15 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                         selectedContact.name.charAt(0).toUpperCase()
                                     )}
                                 </div>
-                                <div>
-                                    <h2 className="font-semibold text-gray-900 dark:text-white">{selectedContact.name}</h2>
+                                <div className="min-w-0">
+                                    <h2 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">{selectedContact.name}</h2>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{selectedContact.role}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Messages List */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50 dark:bg-gray-900 overscroll-contain w-full">
                             {messages.length === 0 ? (
                                 <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                                     <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -382,36 +395,37 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                     </span>
                                                 </div>
                                             )}
-                                            <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
-                                                <div className="flex items-start space-x-2">
-                                                    {!isMe && (
-                                                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group mb-1`}>
+                                                <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] ${isMe ? 'flex-row' : 'flex-row-reverse'}`}>
+                                                    {isMe && (
+                                                        <div className="flex flex-col sm:flex-row gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={() => {
                                                                     setReplyingTo(msg)
                                                                     messageInputRef.current?.focus()
                                                                 }}
-                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
                                                                 title="Reply"
                                                             >
-                                                                <Reply className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                                                <Reply className="h-4 w-4" />
                                                             </button>
                                                             <button
                                                                 onClick={() => {
                                                                     setForwardingMessage(msg)
                                                                     setIsForwardModalOpen(true)
                                                                 }}
-                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
                                                                 title="Forward"
                                                             >
-                                                                <Forward className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                                                <Forward className="h-4 w-4" />
                                                             </button>
                                                         </div>
                                                     )}
+
                                                     <div
-                                                        className={`max-w-[70%] rounded-lg p-3 ${isMe
-                                                            ? 'bg-red-600 text-white rounded-br-none'
-                                                            : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border dark:border-gray-600 rounded-bl-none'
+                                                        className={`rounded-2xl p-3 shadow-sm break-words relative max-w-[75%] sm:max-w-[70%] ${isMe
+                                                            ? 'bg-red-600 text-white rounded-br-none ml-auto'
+                                                            : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border dark:border-gray-600 rounded-bl-none mr-auto'
                                                             }`}
                                                     >
                                                         {msg.is_forwarded && (
@@ -436,7 +450,7 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                             }
                                                             return null
                                                         })()}
-                                                        {msg.content && <p className="text-sm">{msg.content}</p>}
+                                                        {msg.content && <p className="text-xs sm:text-sm break-words">{msg.content}</p>}
                                                         {msg.attachment_url && (
                                                             <MessageAttachment
                                                                 url={msg.attachment_url}
@@ -454,27 +468,27 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                                             )}
                                                         </p>
                                                     </div>
-                                                    {isMe && (
-                                                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {!isMe && (
+                                                        <div className="flex flex-col sm:flex-row gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={() => {
                                                                     setReplyingTo(msg)
                                                                     messageInputRef.current?.focus()
                                                                 }}
-                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
                                                                 title="Reply"
                                                             >
-                                                                <Reply className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                                                <Reply className="h-4 w-4" />
                                                             </button>
                                                             <button
                                                                 onClick={() => {
                                                                     setForwardingMessage(msg)
                                                                     setIsForwardModalOpen(true)
                                                                 }}
-                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                                                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
                                                                 title="Forward"
                                                             >
-                                                                <Forward className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                                                <Forward className="h-4 w-4" />
                                                             </button>
                                                         </div>
                                                     )}
@@ -488,8 +502,8 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                         </div>
 
                         {/* Input Area */}
-                        <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700">
-                            {/* Reply Preview */}
+                        <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 relative z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] w-full">
+                            {/* ... previews ... */}
                             {replyingTo && (
                                 <ReplyPreview
                                     content={replyingTo.content || '[Attachment]'}
@@ -497,28 +511,20 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                     onClose={() => setReplyingTo(null)}
                                 />
                             )}
-
-                            {/* File Preview */}
                             {selectedFile && uploadedFileData && (
                                 <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
                                     <div className="flex items-center space-x-2">
                                         <Paperclip className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                         <span className="text-sm text-gray-800 dark:text-gray-200">{selectedFile.name}</span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                            ({(selectedFile.size / 1024).toFixed(1)} KB)
-                                        </span>
                                     </div>
-                                    <button
-                                        onClick={handleRemoveFile}
-                                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"
-                                    >
-                                        <X className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    <button onClick={handleRemoveFile}>
+                                        <X className="h-4 w-4" />
                                     </button>
                                 </div>
                             )}
 
-                            <div className="p-4">
-                                <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                            <div className="p-2 sm:p-4 w-full">
+                                <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-full">
                                     {/* Hidden file input */}
                                     <input
                                         ref={fileInputRef}
@@ -533,10 +539,10 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={uploading || sending}
-                                        className="p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
+                                        className="p-2 sm:p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
                                         title="Attach file"
                                     >
-                                        <Paperclip className="h-5 w-5" />
+                                        <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                                     </button>
 
                                     {/* Message input */}
@@ -547,16 +553,16 @@ export default function ChatInterface({ currentUser }: ChatInterfaceProps) {
                                         placeholder={uploading ? "Uploading..." : "Type a message..."}
                                         disabled={uploading || sending}
                                         ref={messageInputRef}
-                                        className="flex-1 p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                                        className="flex-1 p-2.5 sm:p-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 min-w-0"
                                     />
 
                                     {/* Send button */}
                                     <button
                                         type="submit"
                                         disabled={(!newMessage.trim() && !uploadedFileData) || sending || uploading}
-                                        className="bg-red-600 text-white p-3 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="bg-red-600 text-white p-2 sm:p-3 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                                     >
-                                        <Send className="h-5 w-5" />
+                                        <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                                     </button>
                                 </form>
                             </div>

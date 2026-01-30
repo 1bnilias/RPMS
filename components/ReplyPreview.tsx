@@ -10,18 +10,18 @@ interface ReplyPreviewProps {
 
 export default function ReplyPreview({ content, senderName, onClose }: ReplyPreviewProps) {
     return (
-        <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-l-4 border-red-600 flex items-start justify-between">
+        <div className="px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 border-l-4 border-red-600 flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     Replying to {senderName || 'message'}
                 </p>
-                <p className="text-sm text-gray-800 dark:text-gray-200 truncate mt-1">
+                <p className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 truncate mt-1">
                     {content}
                 </p>
             </div>
             <button
                 onClick={onClose}
-                className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
+                className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors flex-shrink-0"
             >
                 <X className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </button>

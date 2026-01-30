@@ -106,18 +106,18 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
     const unreadNotificationCount = notifications.filter(n => !n.is_read).length
 
     return (
-        <header className="bg-white dark:bg-gray-800 shadow sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
-                <div className="flex items-center space-x-4">
+        <header className="bg-white dark:bg-gray-800 shadow sticky top-0 z-50 w-full overflow-hidden">
+            <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate mr-2">{title}</h1>
+                <div className="flex items-center space-x-1 sm:space-x-4">
                     <button
                         onClick={() => router.push('/chat')}
-                        className="relative text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                        className="relative text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors p-2"
                         title="Messages"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-6 sm:h-6"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                         {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                                 {unreadCount > 9 ? '9+' : unreadCount}
                             </span>
                         )}
@@ -125,19 +125,19 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
                     <div ref={notificationRef} className="relative">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="relative text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                            className="relative text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors p-2"
                             title="Notifications"
                         >
-                            <Bell className="w-6 h-6" />
+                            <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
                             {unreadNotificationCount > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                                     {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                                 </span>
                             )}
                         </button>
                         {showNotifications && (
-                            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto">
-                                <div className="p-4 border-b dark:border-gray-700">
+                            <div className="fixed sm:absolute left-0 sm:left-auto right-0 mt-2 mx-auto sm:mx-0 w-[calc(100vw-1rem)] sm:w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto top-16 sm:top-auto">
+                                <div className="p-3 sm:p-4 border-b dark:border-gray-700">
                                     <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                         {unreadNotificationCount} unread, {notifications.length - unreadNotificationCount} read
@@ -185,11 +185,11 @@ export default function Header({ user, title, onLogout }: HeaderProps) {
                                 <UserIcon className="h-5 w-5 text-gray-500" />
                             )}
                         </div>
-                        <span className="font-medium">{user.name || 'User'}</span>
+                        <span className="hidden sm:inline font-medium text-sm md:text-base">{user.name || 'User'}</span>
                     </button>
                     <button
                         onClick={onLogout}
-                        className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium"
+                        className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium whitespace-nowrap pl-1"
                     >
                         Sign out
                     </button>

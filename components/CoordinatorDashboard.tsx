@@ -480,10 +480,10 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header user={user} title="Coordinator Dashboard" onLogout={onLogout} />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-6 border-b dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
-            <h2 className="text-xl font-semibold text-red-600">Events</h2>
+          <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-red-600">Events</h2>
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
               <button
                 onClick={() => setShowPromotionModal(true)}
@@ -521,12 +521,12 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pb-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 p-6 pb-0">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-blue-600 dark:text-blue-300 mb-1">Total Events</p>
-                  <h3 className="text-3xl font-bold text-blue-900 dark:text-blue-100">{events.length}</h3>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-blue-900 dark:text-blue-100">{events.length}</h3>
                 </div>
                 <div className="p-2 bg-blue-200 dark:bg-blue-800/50 rounded-lg">
                   <Calendar className="w-6 h-6 text-blue-700 dark:text-blue-300" />
@@ -538,7 +538,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-green-600 dark:text-green-300 mb-1">Upcoming</p>
-                  <h3 className="text-3xl font-bold text-green-900 dark:text-green-100">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">
                     {events.filter(e => new Date(e.date) > new Date()).length}
                   </h3>
                 </div>
@@ -552,7 +552,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Past Events</p>
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
                     {events.filter(e => new Date(e.date) <= new Date()).length}
                   </h3>
                 </div>
@@ -562,7 +562,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
               </div>
             </div>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {events.length === 0 ? (
               <div className="text-center py-8">
                 <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -575,7 +575,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {events
                   .filter(event => {
                     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -699,8 +699,8 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
 
         {/* News Management Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-6 border-b dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
-            <h2 className="text-xl font-semibold text-red-600">News & Updates</h2>
+          <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-red-600">News & Updates</h2>
             <button
               onClick={() => setShowNewsForm(true)}
               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors whitespace-nowrap"
@@ -708,7 +708,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
               Post News
             </button>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {news.length === 0 ? (
               <div className="text-center py-8">
                 <Newspaper className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -721,7 +721,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {news.map(item => (
                   <div key={item.id} className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1">
                     {/* Media Header */}
@@ -830,18 +830,18 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         {/* Promotion Modal */}
         {
           showPromotionModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
                   <div>
-                    <h2 className="text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
-                    <p className="text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
+                    <h2 className="text-lg sm:text-xl font-semibold text-red-600">Papers Ready for Promotion</h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Create events or news posts based on submitted papers.</p>
                   </div>
-                  <button onClick={() => setShowPromotionModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                    <X className="w-6 h-6" />
+                  <button onClick={() => setShowPromotionModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1">
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
-                <div className="p-6 overflow-y-auto">
+                <div className="p-3 sm:p-6 overflow-y-auto">
                   {papers.length === 0 ? (
                     <div className="text-center py-12">
                       <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -889,17 +889,17 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         {/* Event Modal */}
         {
           showEventForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-red-600">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+                  <h2 className="text-lg sm:text-xl font-semibold text-red-600">
                     {editingEvent ? 'Edit Event' : 'Create New Event'}
                   </h2>
-                  <button onClick={cancelForm} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                    <X className="w-6 h-6" />
+                  <button onClick={cancelForm} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1">
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6 overflow-y-auto">
                   <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
                     <div>
                       <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1017,17 +1017,17 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                         Uploading file...
                       </div>
                     )}
-                    <div className="flex justify-end space-x-2 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-2 pt-4">
                       <button
                         type="button"
                         onClick={cancelForm}
-                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                        className="order-2 sm:order-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 text-sm sm:text-base"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                        className="order-1 sm:order-2 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm sm:text-base font-medium"
                       >
                         {editingEvent ? 'Update Event' : 'Create Event'}
                       </button>
@@ -1042,10 +1042,10 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         {/* News Modal */}
         {
           showNewsForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-red-600">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+                  <h2 className="text-lg sm:text-xl font-semibold text-red-600">
                     {editingNews ? 'Edit News Post' : 'Create News Post'}
                   </h2>
                   <button
@@ -1054,12 +1054,12 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                       setEditingNews(null)
                       setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
                     }}
-                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6 overflow-y-auto">
                   <form onSubmit={editingNews ? handleUpdateNews : handleCreateNews} className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1156,7 +1156,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                         Uploading file...
                       </div>
                     )}
-                    <div className="flex justify-end space-x-2 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-2 pt-4">
                       <button
                         type="button"
                         onClick={() => {
@@ -1164,13 +1164,13 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                           setEditingNews(null)
                           setNewsForm({ title: '', summary: '', content: '', category: 'Research', image_url: '', video_url: '' })
                         }}
-                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                        className="order-2 sm:order-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 text-sm sm:text-base"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                        className="order-1 sm:order-2 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm sm:text-base font-medium"
                       >
                         {editingNews ? 'Update News' : 'Create News'}
                       </button>
@@ -1184,10 +1184,10 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         {/* Likes Modal */}
         {
           showLikesModal && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4">
               <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                  <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                  <h3 className="font-bold text-lg sm:text-xl text-gray-900 dark:text-white flex items-center gap-2">
                     <Heart className="w-5 h-5 text-red-500 fill-current" />
                     Liked by
                   </h3>
@@ -1226,10 +1226,10 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
         {/* Comments Modal */}
         {
           activeCommentsPost && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4">
               <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                  <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                  <h3 className="font-bold text-lg sm:text-xl text-gray-900 dark:text-white flex items-center gap-2">
                     <MessageCircle className="w-5 h-5 text-red-500" />
                     Comments
                   </h3>
@@ -1237,7 +1237,7 @@ export default function CoordinatorDashboard({ user, onLogout }: CoordinatorDash
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="p-6 flex flex-col h-[500px]">
+                <div className="p-4 sm:p-6 flex flex-col h-[500px]">
                   <div className="flex-1 overflow-y-auto mb-4 space-y-4 custom-scrollbar pr-2">
                     {loadingComments ? (
                       <div className="flex justify-center py-8">

@@ -65,31 +65,31 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <Header user={user} title={user.name} onLogout={logout} />
-            <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto py-6 sm:py-12 px-3 sm:px-4 lg:px-8">
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
                     {/* Toolbar */}
-                    <div className="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                    <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 dark:bg-gray-800/50">
                         <button
                             onClick={() => router.back()}
-                            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
-                            <ArrowLeft className="h-5 w-5 mr-2" />
+                            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                             Back
                         </button>
-                        <div className="flex space-x-3">
+                        <div className="flex space-x-2 sm:space-x-3 w-full sm:w-auto">
                             <button
                                 onClick={() => router.push('/settings')}
-                                className="flex items-center text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-red-600 dark:hover:border-red-400"
+                                className="flex items-center text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-2 sm:px-3 py-2 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-red-600 dark:hover:border-red-400 flex-1 sm:flex-initial justify-center"
                             >
-                                <Shield className="w-4 h-4 mr-2" />
+                                <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                                 Settings
                             </button>
                             {!isEditing && (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="flex items-center text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md transition-colors"
+                                    className="flex items-center text-xs sm:text-sm text-white bg-red-600 hover:bg-red-700 px-3 sm:px-4 py-2 rounded-md transition-colors flex-1 sm:flex-initial justify-center"
                                 >
-                                    <Edit2 className="w-4 h-4 mr-2" />
+                                    <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                                     Edit Profile
                                 </button>
                             )}
@@ -97,17 +97,17 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Content */}
-                    <div className="p-6 space-y-6">
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                         {message.text && (
-                            <div className={`p-4 rounded-md ${message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
+                            <div className={`p-3 sm:p-4 rounded-md text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
                                 {message.text}
                             </div>
                         )}
 
-                        <div className="flex flex-col md:flex-row gap-8">
+                        <div className="flex flex-col md:flex-row gap-6 sm:gap-8">
                             {/* Avatar Section */}
-                            <div className="flex-shrink-0 flex flex-col items-center space-y-4">
-                                <div className="h-32 w-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+                            <div className="flex-shrink-0 flex flex-col items-center space-y-3 sm:space-y-4">
+                                <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
                                     {user.avatar ? (
                                         <Image
                                             src={user.avatar}
@@ -162,10 +162,10 @@ export default function ProfilePage() {
                                                 placeholder="https://example.com/avatar.jpg"
                                             />
                                         </div>
-                                        <div className="flex justify-end space-x-3 pt-4">
+                                        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
                                             <button
                                                 onClick={() => setIsEditing(false)}
-                                                className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                                className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full sm:w-auto"
                                             >
                                                 <X className="w-4 h-4 mr-2" />
                                                 Cancel
@@ -173,7 +173,7 @@ export default function ProfilePage() {
                                             <button
                                                 onClick={handleSave}
                                                 disabled={saving}
-                                                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                                                className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md text-sm sm:text-base hover:bg-red-700 disabled:opacity-50 w-full sm:w-auto"
                                             >
                                                 <Save className="w-4 h-4 mr-2" />
                                                 {saving ? 'Saving...' : 'Save Changes'}
@@ -183,8 +183,8 @@ export default function ProfilePage() {
                                 ) : (
                                     <div className="space-y-4">
                                         <div>
-                                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
-                                            <div className="flex items-center text-gray-500 dark:text-gray-400 mt-1">
+                                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
+                                            <div className="flex items-center text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
                                                 <Mail className="w-4 h-4 mr-2" />
                                                 {user.email}
                                             </div>

@@ -118,10 +118,10 @@ export default function SignupPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl w-full space-y-8 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl w-full space-y-6 sm:space-y-8 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
                         {step === 1 ? 'Create your account' : 'Verify your email'}
                     </h2>
                     {step === 1 && (
@@ -135,7 +135,7 @@ export default function SignupPage() {
                 </div>
 
                 {step === 1 ? (
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <form className="mt-6 sm:mt-8 space-y-6" onSubmit={handleSubmit}>
                         <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -345,7 +345,7 @@ export default function SignupPage() {
                         </div>
                     </form>
                 ) : (
-                    <form className="mt-8 space-y-6" onSubmit={handleVerify}>
+                    <form className="mt-6 sm:mt-8 space-y-6" onSubmit={handleVerify}>
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-center">Verification Code</label>

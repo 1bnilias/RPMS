@@ -165,14 +165,14 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header user={user} title="Author Dashboard" onLogout={onLogout} />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Papers</p>
-                <h3 className="text-2xl font-bold mt-1 dark:text-white">{papers.length}</h3>
+                <h3 className="text-xl sm:text-2xl font-bold mt-1 dark:text-white">{papers.length}</h3>
               </div>
               <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -180,11 +180,11 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Published</p>
-                <h3 className="text-2xl font-bold mt-1 dark:text-white">
+                <h3 className="text-xl sm:text-2xl font-bold mt-1 dark:text-white">
                   {papers.filter(p => p.status === 'published').length}
                 </h3>
               </div>
@@ -194,11 +194,11 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Under Review</p>
-                <h3 className="text-2xl font-bold mt-1 dark:text-white">
+                <h3 className="text-xl sm:text-2xl font-bold mt-1 dark:text-white">
                   {papers.filter(p => p.status === 'under_review' || p.status === 'submitted').length}
                 </h3>
               </div>
@@ -210,8 +210,8 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-red-600">My Papers</h2>
+          <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center">
+            <h2 className="text-lg sm:text-xl font-semibold text-red-600">My Papers</h2>
             <button
               onClick={() => setShowSubmissionForm(true)}
               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center"
@@ -220,7 +220,7 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
               Submit New Paper
             </button>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {papers.length === 0 ? (
               <div className="text-center py-8">
                 <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -265,18 +265,18 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
 
       {/* Submission Modal */}
       {showSubmissionForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-bold text-red-600">Submit New Paper</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10 flex-shrink-0">
+              <h2 className="text-lg sm:text-xl font-bold text-red-600">Submit New Paper</h2>
               <button
                 onClick={() => setShowSubmissionForm(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6 overflow-y-auto">
               <form onSubmit={handleSubmitPaper} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
@@ -415,17 +415,17 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-6 border-t dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => setShowSubmissionForm(false)}
-                    className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium"
+                    className="order-2 sm:order-1 px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium text-sm sm:text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium shadow-lg shadow-red-600/20"
+                    className="order-1 sm:order-2 px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium shadow-lg shadow-red-600/20 text-sm sm:text-base"
                   >
                     Review Submission
                   </button>
@@ -437,25 +437,25 @@ export default function AuthorDashboard({ user, onLogout }: AuthorDashboardProps
       )}
 
       {showConfirmation && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-5 sm:p-6">
             <div className="flex items-center text-red-600 mb-4">
-              <AlertCircle className="w-8 h-8 mr-3" />
-              <h3 className="text-xl font-bold">Confirm Submission</h3>
+              <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3 flex-shrink-0" />
+              <h3 className="text-lg sm:text-xl font-bold">Confirm Submission</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
               Are you sure you want to submit this paper? Please verify all details and the attached file before proceeding. This action will notify the editorial team.
             </p>
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
               <button
                 onClick={() => setShowConfirmation(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                className="order-2 sm:order-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base"
               >
                 Go Back
               </button>
               <button
                 onClick={confirmSubmit}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium shadow-lg shadow-red-600/20"
+                className="order-1 sm:order-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium shadow-lg shadow-red-600/20 text-sm sm:text-base"
               >
                 Confirm & Submit
               </button>

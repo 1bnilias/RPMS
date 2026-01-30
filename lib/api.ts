@@ -542,3 +542,14 @@ export async function shareToMessage(postType: 'news' | 'event', postId: string,
 export async function getEngagementStats(postType: 'news' | 'event', postId: string) {
     return request<EngagementStats>(`/interactions/stats/${postType}/${postId}`)
 }
+
+export async function createAdminUser(data: { email: string; password: string; name: string; role: 'editor' | 'coordinator' }) {
+    return request<User>('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    })
+}
+
+export async function getAdminStaff() {
+    return request<{ id: string; email: string; name: string; role: string; created_at: string; is_verified: boolean }[]>('/admin/staff')
+}
