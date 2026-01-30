@@ -312,10 +312,10 @@ export default function SocialPost({
 
             {/* Likes Modal */}
             {showLikesModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
-                            <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
+                        <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                            <h3 className="font-bold text-lg sm:text-xl text-gray-900 dark:text-white flex items-center gap-2">
                                 <Heart className="w-5 h-5 text-red-500 fill-current" />
                                 Liked by
                             </h3>

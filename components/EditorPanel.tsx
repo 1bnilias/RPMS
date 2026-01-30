@@ -459,15 +459,15 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="lg:col-span-2 space-y-6">
             {/* Papers for Review Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600">Papers for Review ({papersForReview.length})</h2>
+              <div className="p-4 sm:p-6 border-b dark:border-gray-700">
+                <h2 className="text-lg sm:text-xl font-semibold text-red-600">Papers for Review ({papersForReview.length})</h2>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {papersForReview.length === 0 ? (
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -476,54 +476,53 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                 ) : (
                   <div className="space-y-4">
                     {papersForReview.map((paper) => (
-                      <div key={paper.id} id={`paper-${paper.id}`} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 transition-all hover:shadow-md border border-gray-200 dark:border-gray-600">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Pending Review
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {new Date(paper.created_at).toLocaleDateString()}
-                              </span>
+                      <div key={paper.id} id={`paper-${paper.id}`} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 sm:p-6 transition-all hover:shadow-md border border-gray-200 dark:border-gray-600 overflow-hidden">
+                        <div className="flex flex-col space-y-4">
+                          <div className="w-full">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  Pending Review
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {new Date(paper.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">{paper.title}</h3>
+                              <button
+                                onClick={() => {
+                                  setSelectedAuthor(paper)
+                                  setShowAuthorModal(true)
+                                }}
+                                className="text-sm text-gray-600 dark:text-gray-300 mb-2 hover:text-red-600 hover:underline transition-colors text-left"
+                              >
+                                Author: {paper.author_name}
+                              </button>
+                              <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{paper.abstract}</p>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{paper.title}</h3>
-                            <button
-                              onClick={() => {
-                                setSelectedAuthor(paper)
-                                setShowAuthorModal(true)
-                              }}
-                              className="text-sm text-gray-600 dark:text-gray-300 mb-2 hover:text-red-600 hover:underline transition-colors text-left"
-                            >
-                              Author: {paper.author_name}
-                            </button>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-4">{paper.abstract}</p>
 
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row items-center gap-2 pt-4 border-t dark:border-gray-600">
                               {paper.file_url && (
                                 <button
                                   onClick={() => window.open(paper.file_url, '_blank')}
-                                  className="flex items-center text-sm text-blue-600 hover:text-blue-700"
+                                  className="w-full sm:w-auto flex items-center justify-center text-xs text-blue-600 hover:text-blue-700 font-medium px-4 py-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30"
                                 >
-                                  <Download className="w-4 h-4 mr-1" />
+                                  <Download className="w-3.5 h-3.5 mr-2" />
                                   Download PDF
                                 </button>
                               )}
+                              <button
+                                onClick={() => {
+                                  setSelectedPaper(paper)
+                                  setShowReviewModal(true)
+                                }}
+                                className="w-full sm:w-auto justify-center bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center text-sm font-semibold shadow-sm"
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Start Review
+                              </button>
                             </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2 ml-4">
-                            <button
-                              onClick={() => {
-                                setSelectedPaper(paper)
-                                setShowReviewModal(true)
-                              }}
-                              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center text-sm whitespace-nowrap"
-                            >
-                              <FileText className="w-4 h-4 mr-2" />
-                              Review
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -538,10 +537,10 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
           <div className="space-y-6 sticky top-24">
             {/* Papers Reviewed Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-green-600">Papers Reviewed ({papersReviewed.length})</h2>
+              <div className="p-4 sm:p-6 border-b dark:border-gray-700">
+                <h2 className="text-lg sm:text-xl font-semibold text-green-600">Papers Reviewed ({papersReviewed.length})</h2>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {papersReviewed.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -606,14 +605,14 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
             {/* Feedback for Author Section */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-blue-100 dark:border-blue-900/30 overflow-hidden">
-              <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30">
+              <div className="p-4 sm:p-6 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30">
                 <h2 className="text-xl font-bold text-blue-700 dark:text-blue-400 flex items-center">
                   <MessageSquare className="w-6 h-6 mr-2" />
                   Send Feedback to Author
                 </h2>
                 <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">Direct communication with the principal investigator</p>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <form onSubmit={sendFeedbackToAuthor} className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
@@ -661,14 +660,14 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
             {/* Contact Admin Section */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="p-6 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+              <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
                   <MessageSquare className="w-6 h-6 mr-2 text-red-600" />
                   Contact Admin
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Escalate issues or ask for clarification</p>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <form onSubmit={contactAdmin} className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
@@ -719,15 +718,15 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       {/* Modals */}
       {
         editingPaper && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">Edit Paper</h2>
-                <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-6 h-6" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+                <h2 className="text-lg sm:text-xl font-semibold text-red-600">Edit Paper</h2>
+                <button onClick={() => setEditingPaper(null)} className="text-gray-500 hover:text-gray-700 p-1">
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 overflow-y-auto">
                 <form onSubmit={handleUpdatePaper} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
@@ -762,9 +761,9 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                       className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
                     />
                   </div>
-                  <div className="flex justify-end space-x-2">
-                    <button type="button" onClick={() => setEditingPaper(null)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Update Paper</button>
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-2 pt-4">
+                    <button type="button" onClick={() => setEditingPaper(null)} className="order-2 sm:order-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 text-sm sm:text-base">Cancel</button>
+                    <button type="submit" className="order-1 sm:order-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm sm:text-base">Update Paper</button>
                   </div>
                 </form>
               </div>
@@ -775,15 +774,15 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
       {
         detailsPaper && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">Validate Publication Details: {detailsPaper.title}</h2>
-                <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-6 h-6" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+                <h2 className="text-base sm:text-xl font-semibold text-red-600 truncate mr-4">Validate Details: {detailsPaper.title}</h2>
+                <button onClick={() => setDetailsPaper(null)} className="text-gray-500 hover:text-gray-700 p-1">
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 overflow-y-auto">
                 <form onSubmit={handleUpdateDetails} className="space-y-8">
                   {/* Section 1: Project Identification */}
                   <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -1107,27 +1106,27 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
 
       {
         showAuthorModal && selectedAuthor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
-                    <UserIcon className="w-6 h-6" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
+                <div className="flex items-center gap-3 sm:gap-4 truncate mr-2">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex-shrink-0 flex items-center justify-center text-red-600 dark:text-red-400">
+                    <UserIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
+                  <div className="truncate">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{selectedAuthor.author_name}</h2>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{selectedAuthor.author_email}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowAuthorModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
                     <p className="text-sm text-gray-900 dark:text-white font-medium">{selectedAuthor.author_author_type || 'N/A'}</p>
@@ -1169,10 +1168,10 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                   </div>
                 )}
 
-                <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
+                <div className="pt-6 border-t dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                   <button
                     onClick={() => setShowAuthorModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="order-2 sm:order-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
                     Close
                   </button>
@@ -1181,7 +1180,7 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
                       const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
                       router.push(`/chat?userId=${selectedAuthor.author_id}&message=${message}`)
                     }}
-                    className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                    className="order-1 sm:order-2 px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <MessageSquare className="w-4 h-4" />
                     Contact Author
@@ -1196,15 +1195,15 @@ export default function EditorPanel({ user, onLogout }: EditorPanelProps) {
       {/* Review Modal */}
       {
         showReviewModal && selectedPaper && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">Review: {selectedPaper.title}</h2>
-                <button onClick={() => setShowReviewModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-6 h-6" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
+                <h2 className="text-lg sm:text-xl font-semibold text-red-600 truncate mr-4">Review: {selectedPaper.title}</h2>
+                <button onClick={() => setShowReviewModal(false)} className="text-gray-500 hover:text-gray-700 p-1">
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 overflow-y-auto">
                 <form onSubmit={handleSubmitReview} className="space-y-6">
                   {/* Rating Sliders */}
                   {[

@@ -124,19 +124,19 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto space-y-6">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-12 px-3 sm:px-4 lg:px-8">
+            <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
 
                 {/* Security Settings */}
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                        <h2 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                            <Lock className="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" />
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                        <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                            <Lock className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-500 dark:text-gray-400" />
                             Security
                         </h2>
                     </div>
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                         <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">Change Password</h3>
                         {passwordMessage.text && (
                             <div className={`mb-4 p-3 rounded text-sm ${passwordMessage.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
@@ -187,22 +187,22 @@ export default function SettingsPage() {
 
                 {/* Preferences */}
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                        <h2 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                            <Bell className="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" />
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                        <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                            <Bell className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-500 dark:text-gray-400" />
                             Preferences
                         </h2>
                     </div>
-                    <div className="p-6 space-y-4">
+                    <div className="p-4 sm:p-6 space-y-4">
                         {preferencesMessage.text && (
                             <div className={`mb-4 p-3 rounded text-sm ${preferencesMessage.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
                                 {preferencesMessage.text}
                             </div>
                         )}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                {darkMode ? <Moon className="w-5 h-5 mr-3 text-gray-400" /> : <Sun className="w-5 h-5 mr-3 text-gray-400" />}
-                                <span className="text-gray-700 dark:text-gray-300">Dark Mode</span>
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center min-w-0">
+                                {darkMode ? <Moon className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-gray-400 flex-shrink-0" /> : <Sun className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-gray-400 flex-shrink-0" />}
+                                <span className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Dark Mode</span>
                             </div>
                             <button
                                 onClick={toggleDarkMode}
@@ -212,10 +212,10 @@ export default function SettingsPage() {
                                 <span className={`${darkMode ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
                             </button>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <Mail className="w-5 h-5 mr-3 text-gray-400" />
-                                <span className="text-gray-700 dark:text-gray-300">Email Notifications</span>
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center min-w-0">
+                                <Mail className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-gray-400 flex-shrink-0" />
+                                <span className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Email Notifications</span>
                             </div>
                             <button
                                 onClick={handleEmailNotificationsToggle}
@@ -230,13 +230,13 @@ export default function SettingsPage() {
 
                 {/* Danger Zone */}
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-red-200 dark:border-red-800">
-                    <div className="px-6 py-4 border-b border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-                        <h2 className="text-lg font-medium text-red-800 dark:text-red-400 flex items-center">
-                            <Trash2 className="w-5 h-5 mr-2" />
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+                        <h2 className="text-base sm:text-lg font-medium text-red-800 dark:text-red-400 flex items-center">
+                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                             Danger Zone
                         </h2>
                     </div>
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                             Once you delete your account, there is no going back. Please be certain.
                         </p>
@@ -248,11 +248,11 @@ export default function SettingsPage() {
                                 Delete Account
                             </button>
                         ) : (
-                            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md border border-red-200 dark:border-red-800">
-                                <p className="text-sm text-red-800 dark:text-red-400 font-medium mb-3">
+                            <div className="bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 rounded-md border border-red-200 dark:border-red-800">
+                                <p className="text-xs sm:text-sm text-red-800 dark:text-red-400 font-medium mb-3">
                                     Are you sure you want to delete your account? This action cannot be undone.
                                 </p>
-                                <div className="flex space-x-3">
+                                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                                     <button
                                         onClick={handleDeleteAccount}
                                         disabled={deleteLoading}

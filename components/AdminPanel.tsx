@@ -308,56 +308,54 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       <Header user={user} title="Admin Dashboard" onLogout={onLogout} />
 
       {/* Status Messages */}
-      <div className="max-w-7xl mx-auto px-6 mt-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 mt-4">
         {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative animate-in fade-in duration-300" role="alert">
+          <div className="bg-green-100 border border-green-400 text-green-700 px-3 sm:px-4 py-2 sm:py-3 rounded relative animate-in fade-in duration-300 text-sm" role="alert">
             <span className="block sm:inline">{successMessage}</span>
           </div>
         )}
         {errorMessage && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative animate-in fade-in duration-300" role="alert">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded relative animate-in fade-in duration-300 text-sm" role="alert">
             <span className="block sm:inline">{errorMessage}</span>
           </div>
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-red-600">System Overview</h2>
+              <div className="p-3 sm:p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider">System Overview</h2>
+                <span className="text-[10px] text-gray-500 font-medium uppercase">Live Stats</span>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900/50">
-                    <h3 className="font-medium text-blue-900 dark:text-blue-100">Total Papers</h3>
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{papers.length}</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">Ready for approval</p>
+              <div className="p-3 sm:p-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-2 sm:p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                    <p className="text-[10px] sm:text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">Papers</p>
+                    <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{papers.length}</p>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-900/50">
-                    <h3 className="font-medium text-green-900 dark:text-green-100">Avg Review Score</h3>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  <div className="bg-green-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg border border-green-100 dark:border-green-900/30">
+                    <p className="text-[10px] sm:text-xs font-semibold text-green-600 dark:text-green-400 uppercase">Avg Score</p>
+                    <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {papers.length > 0 ? getAverageScore(papers.flatMap(p => p.reviews)) : '0'}
                     </p>
-                    <p className="text-sm text-green-700 dark:text-green-300">Across all papers</p>
                   </div>
-                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-900/50">
-                    <h3 className="font-medium text-purple-900 dark:text-purple-100">Total Reviews</h3>
-                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-2 sm:p-3 rounded-lg border border-purple-100 dark:border-purple-900/30">
+                    <p className="text-[10px] sm:text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Reviews</p>
+                    <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {papers.reduce((acc, paper) => acc + paper.reviews.length, 0)}
                     </p>
-                    <p className="text-sm text-purple-700 dark:text-purple-300">Completed reviews</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-4 mb-6">
+            <div className="flex space-x-2 sm:space-x-4 mb-4 sm:mb-6 overflow-x-auto pb-2">
               <button
                 onClick={() => setActiveTab('reviewed')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'reviewed'
+                className={`px-3 sm:px-4 py-2 rounded-md text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${activeTab === 'reviewed'
                   ? 'bg-red-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
@@ -366,7 +364,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               </button>
               <button
                 onClick={() => setActiveTab('validated')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'validated'
+                className={`px-3 sm:px-4 py-2 rounded-md text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${activeTab === 'validated'
                   ? 'bg-red-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
@@ -375,7 +373,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               </button>
               <button
                 onClick={() => setActiveTab('staff')}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'staff'
+                className={`px-3 sm:px-4 py-2 rounded-md text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${activeTab === 'staff'
                   ? 'bg-red-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
@@ -387,25 +385,25 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             {/* Content Area */}
             {activeTab === 'staff' ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Staff Management</h2>
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">Staff Management</h2>
                   <button
                     onClick={() => setShowAddStaffModal(true)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                    className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center justify-center"
                   >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Staff
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span className="text-sm sm:text-base">Add Staff</span>
                   </button>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-                    <thead className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold">
+                  <table className="w-full text-left text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    <thead className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold text-xs sm:text-sm">
                       <tr>
-                        <th className="p-4">Name</th>
-                        <th className="p-4">Username (Email)</th>
-                        <th className="p-4">Role</th>
-                        <th className="p-4">Joined</th>
-                        <th className="p-4">Status</th>
+                        <th className="p-2 sm:p-4 whitespace-nowrap">Name</th>
+                        <th className="p-2 sm:p-4 whitespace-nowrap">Username (Email)</th>
+                        <th className="p-2 sm:p-4 whitespace-nowrap">Role</th>
+                        <th className="p-2 sm:p-4 whitespace-nowrap">Joined</th>
+                        <th className="p-2 sm:p-4 whitespace-nowrap">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -458,10 +456,10 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
               </div>
             ) : activeTab === 'reviewed' ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div className="p-6 border-b dark:border-gray-700">
-                  <h2 className="text-xl font-semibold text-yellow-600">Reviewed Papers ({pendingPapers.length})</h2>
+                <div className="p-4 sm:p-6 border-b dark:border-gray-700">
+                  <h2 className="text-lg sm:text-xl font-semibold text-yellow-600">Reviewed Papers ({pendingPapers.length})</h2>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {pendingPapers.length === 0 ? (
                     <div className="text-center py-8">
                       <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -567,7 +565,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
             )}
           </div>
 
-          <div className="lg:col-span-1 space-y-6 sticky top-6">
+          <div className="lg:col-span-1 space-y-6 sticky top-[5.5rem]">
             {/* Contact Editor Section */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
               <div className="p-6 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
@@ -699,15 +697,15 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
       {/* Paper Details Modal */}
       {selectedPaper && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-semibold text-red-600">Paper Details</h2>
-              <button onClick={() => setSelectedPaper(null)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-red-600">Paper Details</h2>
+              <button onClick={() => setSelectedPaper(null)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1">
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
               <div>
                 <h3 className="text-2xl font-bold dark:text-white mb-2">{selectedPaper.title}</h3>
                 <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -819,13 +817,13 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 )}
               </div>
 
-              <div className="border-t dark:border-gray-700 pt-6 flex justify-end space-x-3">
+              <div className="border-t dark:border-gray-700 pt-6 flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
                 <button
                   onClick={() => {
                     handlePublicationDecision(selectedPaper.id, 'rejected')
                     setSelectedPaper(null)
                   }}
-                  className="px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                  className="order-3 sm:order-1 px-6 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm sm:text-base"
                 >
                   Reject
                 </button>
@@ -834,7 +832,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                     handlePublicationDecision(selectedPaper.id, 'approved')
                     setSelectedPaper(null)
                   }}
-                  className="px-6 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors font-medium"
+                  className="order-2 sm:order-1 px-6 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors font-medium text-sm sm:text-base"
                 >
                   Approve
                 </button>
@@ -843,7 +841,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                     handlePublicationDecision(selectedPaper.id, 'published')
                     setSelectedPaper(null)
                   }}
-                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                  className="order-1 sm:order-1 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm sm:text-base"
                 >
                   Publish
                 </button>
@@ -855,26 +853,26 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
       {/* Author Detail Modal */}
       {showAuthorModal && selectedAuthor && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
+              <div className="flex items-center gap-3 sm:gap-4 truncate mr-2">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex-shrink-0 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-lg sm:text-xl">
                   {selectedAuthor.author_name?.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAuthor.author_name}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{selectedAuthor.author_email}</p>
+                <div className="truncate">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{selectedAuthor.author_name}</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{selectedAuthor.author_email}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAuthorModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Author Type</p>
@@ -909,10 +907,10 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 </div>
               )}
 
-              <div className="pt-6 border-t dark:border-gray-700 flex justify-end gap-3">
+              <div className="pt-6 border-t dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={() => setShowAuthorModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="order-2 sm:order-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Close
                 </button>
@@ -921,7 +919,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                     const message = encodeURIComponent(`Hello ${selectedAuthor.author_name}, I am contacting you regarding your paper "${selectedAuthor.title}".`)
                     window.location.href = `/chat?userId=${selectedAuthor.author_id}&message=${message}`
                   }}
-                  className="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                  className="order-1 sm:order-2 px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
                   <MessageSquare className="w-4 h-4" />
                   Contact Author
@@ -933,22 +931,22 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       )}
       {/* Add Staff Modal */}
       {showAddStaffModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-t-xl">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
-                <Shield className="w-6 h-6 mr-2 text-red-600" />
-                Add New Staff Member
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 flex-shrink-0">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-red-600" />
+                Add New Staff
               </h2>
               <button
                 onClick={() => setShowAddStaffModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
-            <form onSubmit={handleAddStaff} className="p-6 space-y-4">
+            <form onSubmit={handleAddStaff} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-300 mb-4">
                 Creating a staff account will generate a confirmed user. Please share the credentials with the staff member securely.
               </div>
@@ -1002,17 +1000,17 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              <div className="pt-4 flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddStaffModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors bg-white dark:bg-gray-800"
+                  className="order-2 sm:order-1 flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors bg-white dark:bg-gray-800 text-sm sm:text-base"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-lg shadow-red-600/20"
+                  className="order-1 sm:order-2 flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-lg shadow-red-600/20 text-sm sm:text-base"
                 >
                   Create Account
                 </button>
@@ -1023,24 +1021,24 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
       )}
       {/* Staff Details Modal */}
       {showStaffModal && selectedStaff && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-t-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-lg">
                   {selectedStaff.name.charAt(0).toUpperCase()}
                 </div>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Staff Profile</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">Staff Profile</h2>
               </div>
               <button
                 onClick={() => setShowStaffModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6 overflow-y-auto">
               <div className="text-center mb-6">
                 <div className="h-24 w-24 rounded-full bg-gray-100 dark:bg-gray-700 mx-auto flex items-center justify-center text-4xl font-bold text-gray-500 dark:text-gray-400 mb-3">
                   {selectedStaff.name.charAt(0).toUpperCase()}

@@ -45,7 +45,7 @@ export default function WelcomePage() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-red-900 to-red-700 flex flex-col text-white overflow-hidden">
       <div className="flex-grow flex flex-col items-center justify-center p-4 overflow-y-auto">
-        <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-8 w-full py-4">
+        <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-4 sm:space-y-4 sm:space-y-6 md:space-y-8 w-full py-4">
 
           {/* Logo / Icon */}
           <div className="flex justify-center mb-4 md:mb-8">
@@ -59,18 +59,18 @@ export default function WelcomePage() {
           </div>
 
           {/* University Name */}
-          <h2 className="text-xl md:text-3xl font-serif tracking-wider text-red-100 uppercase">
+          <h2 className="text-base sm:text-lg md:text-xl md:text-base sm:text-lg md:text-xl sm:text-lg sm:text-base sm:text-lg md:text-xl md:text-2xl md:text-3xl font-serif tracking-wider text-red-100 uppercase">
             Saint Mary&apos;s University
           </h2>
 
           {/* System Title */}
-          <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mb-2 md:mb-4">
+          <h1 className="text-lg sm:text-base sm:text-lg md:text-xl md:text-2xl sm:text-base sm:text-lg md:text-xl sm:text-lg sm:text-base sm:text-lg md:text-xl md:text-2xl md:text-3xl md:text-4xl md:text-7xl font-extrabold tracking-tight mb-2 md:mb-4">
             RPMS
           </h1>
 
           {/* Onboarding Carousel */}
           <div className="min-h-[140px] md:min-h-[180px] flex flex-col justify-center transition-all duration-500 ease-in-out px-4">
-            <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 animate-in fade-in slide-in-from-bottom-4 duration-500" key={`title-${currentSlide}`}>
+            <h3 className="text-base sm:text-lg md:text-xl md:text-lg sm:text-base sm:text-lg md:text-xl md:text-2xl font-bold mb-2 md:mb-3 animate-in fade-in slide-in-from-bottom-4 duration-500" key={`title-${currentSlide}`}>
               {slides[currentSlide].title}
             </h3>
             <p className="text-base md:text-lg text-red-200 max-w-xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100" key={`desc-${currentSlide}`}>
@@ -94,7 +94,7 @@ export default function WelcomePage() {
             <Button
               onClick={handleNext}
               size="lg"
-              className="bg-white text-red-800 hover:bg-red-50 px-8 py-4 md:px-10 md:py-6 text-lg md:text-xl font-bold rounded-full shadow-lg transition-transform hover:scale-105"
+              className="bg-white text-red-800 hover:bg-red-50 px-8 py-4 md:px-10 md:py-6 text-lg md:text-base sm:text-lg md:text-xl font-bold rounded-full shadow-lg transition-transform hover:scale-105"
             >
               {currentSlide === slides.length - 1 ? "Get Started" : "Next"}
               <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6" />

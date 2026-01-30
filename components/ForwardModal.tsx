@@ -40,31 +40,31 @@ export default function ForwardModal({ isOpen, onClose, contacts, onForward, mes
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
-                <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Forward Message</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-3 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                <div className="p-3 sm:p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Forward Message</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 italic truncate">
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 italic truncate">
                         &quot;{messageContent}&quot;
                     </p>
                 </div>
 
-                <div className="p-4">
-                    <div className="relative mb-4">
+                <div className="p-3 sm:p-4">
+                    <div className="relative mb-3 sm:mb-4">
                         <input
                             type="text"
                             placeholder="Search contacts..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                         />
-                        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                     </div>
 
                     <div className="max-h-60 overflow-y-auto space-y-2">
@@ -74,18 +74,18 @@ export default function ForwardModal({ isOpen, onClose, contacts, onForward, mes
                                 <div
                                     key={contact.id}
                                     onClick={() => toggleContact(contact.id)}
-                                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${isSelected
-                                            ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent'
+                                    className={`flex items-center p-2.5 sm:p-3 rounded-lg cursor-pointer transition-colors ${isSelected
+                                        ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                                        : 'hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent'
                                         }`}
                                 >
-                                    <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isSelected
-                                            ? 'bg-red-600 border-red-600'
-                                            : 'border-gray-300 dark:border-gray-500'
+                                    <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded border flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0 ${isSelected
+                                        ? 'bg-red-600 border-red-600'
+                                        : 'border-gray-300 dark:border-gray-500'
                                         }`}>
                                         {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
                                     </div>
-                                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold mr-3 overflow-hidden">
+                                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold mr-2 sm:mr-3 overflow-hidden flex-shrink-0">
                                         {contact.avatar ? (
                                             <Image
                                                 src={contact.avatar}
@@ -98,8 +98,8 @@ export default function ForwardModal({ isOpen, onClose, contacts, onForward, mes
                                             contact.name.charAt(0).toUpperCase()
                                         )}
                                     </div>
-                                    <div>
-                                        <p className="font-medium text-gray-900 dark:text-white">{contact.name}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">{contact.name}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{contact.role}</p>
                                     </div>
                                 </div>
@@ -108,17 +108,17 @@ export default function ForwardModal({ isOpen, onClose, contacts, onForward, mes
                     </div>
                 </div>
 
-                <div className="p-4 border-t dark:border-gray-700 flex justify-end">
+                <div className="p-3 sm:p-4 border-t dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-2 sm:gap-0">
                     <button
                         onClick={onClose}
-                        className="mr-2 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                        className="sm:mr-2 px-4 py-2 text-sm sm:text-base text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg order-2 sm:order-1"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleForward}
                         disabled={selectedContactIds.length === 0}
-                        className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
                     >
                         <Send className="h-4 w-4 mr-2" />
                         Send {selectedContactIds.length > 0 && `(${selectedContactIds.length})`}
