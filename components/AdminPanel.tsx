@@ -39,6 +39,8 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [showAddStaffModal, setShowAddStaffModal] = useState(false)
   const [newStaffForm, setNewStaffForm] = useState({ name: '', email: '', password: '', role: 'editor' })
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
+  const [showStaffModal, setShowStaffModal] = useState(false)
 
   const showStatus = (message: string, type: 'success' | 'error' = 'success') => {
     if (type === 'success') {
@@ -58,7 +60,7 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
     fetchData()
     const interval = setInterval(fetchData, 5000) // Poll every 5 seconds
     return () => clearInterval(interval)
-  }, [])
+  }, [activeTab])
 
   // Handle hash navigation for deep linking
   useEffect(() => {
@@ -413,7 +415,14 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                         </tr>
                       ) : (
                         staff.map(member => (
-                          <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                          <tr
+                            key={member.id}
+                            onClick={() => {
+                              setSelectedStaff(member)
+                              setShowStaffModal(true)
+                            }}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer group"
+                          >
                             <td className="p-4 font-medium text-gray-900 dark:text-white flex items-center gap-3">
                               <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold">
                                 {member.name.charAt(0).toUpperCase()}
@@ -1009,6 +1018,78 @@ export default function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Staff Details Modal */}
+      {showStaffModal && selectedStaff && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-t-xl">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-lg">
+                  {selectedStaff.name.charAt(0).toUpperCase()}
+                </div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Staff Profile</h2>
+              </div>
+              <button
+                onClick={() => setShowStaffModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="text-center mb-6">
+                <div className="h-24 w-24 rounded-full bg-gray-100 dark:bg-gray-700 mx-auto flex items-center justify-center text-4xl font-bold text-gray-500 dark:text-gray-400 mb-3">
+                  {selectedStaff.name.charAt(0).toUpperCase()}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedStaff.name}</h3>
+                <p className="text-gray-500 dark:text-gray-400">{selectedStaff.email}</p>
+                <div className="mt-3">
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wider ${selectedStaff.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                    selectedStaff.role === 'editor' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                    {selectedStaff.role}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t dark:border-gray-700 pt-4">
+                <div className="flex justify-between items-center py-2 border-b dark:border-gray-700/50">
+                  <span className="text-gray-600 dark:text-gray-400 font-medium">Joined Date</span>
+                  <span className="text-gray-900 dark:text-white">{new Date(selectedStaff.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b dark:border-gray-700/50">
+                  <span className="text-gray-600 dark:text-gray-400 font-medium">Account Status</span>
+                  {selectedStaff.is_verified ? (
+                    <span className="flex items-center text-green-600 font-medium bg-green-50 px-2 py-1 rounded">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="text-yellow-600 font-medium flex items-center bg-yellow-50 px-2 py-1 rounded">
+                      Pending
+                    </span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600 dark:text-gray-400 font-medium">User ID</span>
+                  <span className="text-xs text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 p-1 rounded">{selectedStaff.id.slice(0, 8)}...</span>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={() => setShowStaffModal(false)}
+                  className="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
